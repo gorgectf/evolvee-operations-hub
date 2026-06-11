@@ -1,5 +1,7 @@
 # Evolvee Radiance - Operations Hub
 
+evolvee-operations-hub.netlify.app
+
 The Operations Hub is an internal web application that centralises Evolvee Radiance's day-to-day operations into a single place. It pulls live data from the tools the business already runs on--Shopify, Zoho, AfterShip, and Klaviyo--and surfaces it as an at-a-glance dashboard, while giving the team a structured way to manage manufacturer relationships and reorder cycles. The goal is to replace scattered spreadsheets and manual checks with one reliable, role-aware system that scales as the business grows.
 
 > **Status:** Phase 1 (Setup & Learning). This repository currently contains the project scaffold; feature modules are built out from Phase 2 onward.
