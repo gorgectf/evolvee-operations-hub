@@ -1,44 +1,57 @@
-# Shopify Admin API — Notes
-**Evolvee Radiance Operations Hub · Phase 2 reference**  
-*Last updated: 9 June 2026*
+# Shopify Admin API
+
+**Evolvée Radiance Operations Hub**
+*Service reference · API version 2026-01*
+
+**Integration role:** Pull (request/response). The backend makes scheduled outbound
+calls to Shopify on a `node-cron` schedule and stores the results. V1 is read-only.
 
 ---
 
-## ⚠️ REST API legacy status
+## REST vs GraphQL — legacy status
 
-The REST Admin API is a legacy API as of October 1, 2024. Starting April 1, 2025, all new public apps must be built exclusively with the GraphQL Admin API.
+The REST Admin API became a legacy API on **October 1, 2024**. From **April 1, 2025**,
+all new *public* apps must be built on the GraphQL Admin API.
 
-**What this means for this project:**  
-Evolvée Radiance's Operations Hub is an internal custom app (not a public app listed on the Shopify App Store), so REST access is still available and functional. However, build with migration in mind — prefer read-only REST calls for V1, and plan to move to GraphQL for any write operations or new modules added in later phases. Shopify has not announced a hard sunset date for REST on custom apps.
+**What this means here:** the Operations Hub is an internal **custom app** (not listed
+on the Shopify App Store), so REST is still available and functional. Build with
+migration in mind:
+
+- Prefer **read-only REST** calls for V1.
+- Plan to move to **GraphQL** for any write operations or new modules in later phases.
+- Shopify has **not** announced a hard sunset date for REST on custom apps.
 
 ---
 
 ## Authentication
 
-### Custom app token (what we're using)
+### Custom app token (the method used here)
 
-To create a custom app, navigate to Shopify Admin → Apps → Develop apps. Once the app is set up, you'll receive an Admin API access token, which serves as the key to authenticate your requests.
+Create the custom app in **Shopify Admin → Apps → Develop apps**. On install you receive
+an **Admin API access token**, which authenticates every request.
 
-Include your token as a `X-Shopify-Access-Token` header on all API queries.
+Send the token as an `X-Shopify-Access-Token` header on all calls:
 
 ```
 GET https://{shop}.myshopify.com/admin/api/2026-01/orders.json
 X-Shopify-Access-Token: {access_token}
 ```
 
-**Important:** The access token is shown **once** on install. If missed, the app must be uninstalled and reinstalled — this generates a new token and invalidates the old one. Store it in the `.env` file under `SHOPIFY_ACCESS_TOKEN` and never commit it.
+> **The token is shown once on install.** If missed, the app must be uninstalled and
+> reinstalled — this generates a new token and invalidates the old one. Store it in
+> `.env` as `SHOPIFY_ACCESS_TOKEN` and never commit it.
 
-### OAuth (public/custom apps via Dev Dashboard)
+### OAuth
 
-Public and custom apps created in the Dev Dashboard generate tokens using OAuth. To keep the platform secure, apps need to request specific access scopes during the install process — only request as much data access as your app needs.
-
-For V1 of this project the custom app token approach above is sufficient. OAuth becomes relevant if the app is ever distributed to other stores.
+Public/custom apps created in the Dev Dashboard generate tokens via OAuth, requesting
+specific access scopes at install. For V1 the custom app token above is sufficient;
+OAuth only becomes relevant if the app is ever distributed to other stores.
 
 ---
 
 ## Access scopes required for V1 modules
 
-Request only what V1 needs. These scopes are set in Shopify Admin when configuring the custom app.
+Request only what V1 needs. These are set in Shopify Admin when configuring the custom app.
 
 | Module | Read scope | Write scope (if needed) |
 |---|---|---|
@@ -49,7 +62,9 @@ Request only what V1 needs. These scopes are set in Shopify Admin when configuri
 | Inventory Levels | `read_inventory` | `write_inventory` |
 | Locations | `read_locations` | — |
 
-By default, the Order API allows access to data from the last 60 days. To retrieve older data, you must request the `read_all_orders` scope in addition to `read_orders`. Shopify will only approve this if you have a valid business reason.
+> By default the Order API only returns the **last 60 days**. To retrieve older data,
+> request `read_all_orders` **in addition to** `read_orders`. Shopify only approves this
+> with a valid business reason.
 
 ---
 
@@ -59,19 +74,16 @@ Base URL pattern: `https://{shop}.myshopify.com/admin/api/2026-01/`
 
 ### Orders
 
-An order is a customer's request to purchase one or more products from a shop. You can create, retrieve, update, and delete orders using the Order resource.
-
 | Action | Endpoint |
 |---|---|
 | List orders | `GET /orders.json` |
 | Single order | `GET /orders/{id}.json` |
 | Count orders | `GET /orders/count.json` |
 
-Useful query params on list: `status`, `financial_status`, `fulfillment_status`, `created_at_min`, `created_at_max`, `limit` (max 250), `since_id`.
+Useful list params: `status`, `financial_status`, `fulfillment_status`,
+`created_at_min`, `created_at_max`, `limit` (max 250), `since_id`.
 
-**Note:** You can't change the items or quantities in an order using the REST API — that requires the GraphQL Admin API.
-
----
+> You can't change items or quantities on an order via REST — that requires GraphQL.
 
 ### Products
 
@@ -82,9 +94,7 @@ Useful query params on list: `status`, `financial_status`, `fulfillment_status`,
 | Count products | `GET /products/count.json` |
 | Product variants | `GET /products/{id}/variants.json` |
 
-Useful query params: `title`, `vendor`, `product_type`, `published_status`, `limit`, `since_id`.
-
----
+Useful params: `title`, `vendor`, `product_type`, `published_status`, `limit`, `since_id`.
 
 ### Customers
 
@@ -95,13 +105,10 @@ Useful query params: `title`, `vendor`, `product_type`, `published_status`, `lim
 | Count customers | `GET /customers/count.json` |
 | Customer orders | `GET /customers/{id}/orders.json` |
 
-The Orders resource requires access to protected customer data — enable this in the custom app's data protection settings if customer PII appears in order responses.
-
----
+> The Orders resource requires access to **protected customer data**. Enable this in the
+> custom app's data protection settings if customer PII appears in order responses.
 
 ### Inventory Levels
-
-An inventory level represents the quantities of an inventory item for a location. Each inventory level belongs to one inventory item and has one location. For every location where an inventory item can be stocked, there's an inventory level that represents the inventory item's quantities relating to that location.
 
 The inventory model has four layers:
 
@@ -117,51 +124,64 @@ Product Variant  →  InventoryItem  →  InventoryLevel  →  Location
 | Set quantity | `POST /inventory_levels/set.json` |
 | List locations | `GET /locations.json` |
 
-**Required param:** The `GET /inventory_levels.json` endpoint requires either `inventory_item_ids` or `location_id` — it will not return results without one of them.
+> `GET /inventory_levels.json` **requires** either `inventory_item_ids` or `location_id`
+> — it returns nothing without one of them.
 
 ---
 
 ## Rate limits
 
-### Algorithm: leaky bucket
-
-Shopify employs a leaky bucket algorithm. The bucket has a maximum capacity of 40 requests. Each request fills the bucket by 1 request. Requests "leak" out of the bucket at a consistent rate of 2 requests per second.
+**Algorithm: leaky bucket.** Capacity 40 requests; each request fills it by 1; requests
+leak out at 2/second.
 
 | Plan | Bucket size | Leak rate |
 |---|---|---|
 | Standard | 40 requests | 2 req/s |
 | Shopify Plus | 400 requests | 20 req/s |
 
-Evolvée Radiance is on a standard plan — design sync jobs around the 2 req/s sustained rate.
+Evolvée Radiance is on a **standard plan** — design sync jobs around the 2 req/s
+sustained rate.
 
-### Monitoring usage
+**Monitoring:** read the `X-Shopify-Shop-Api-Call-Limit` response header (e.g. `32/40`
+= 32 used of 40). The count decreases over time at the leak rate.
 
-You can check how many requests you've already made using the `X-Shopify-Shop-Api-Call-Limit` response header. It lists how many requests you've made for a particular store — for example `32/40` means 32 used, 40 is the bucket size. The request count decreases according to the leak rate over time.
+**On exceed:** a `429 Too Many Requests` plus a `Retry-After` header (seconds to wait).
 
-### When the limit is exceeded
+### Handling strategy (Node-cron sync jobs)
 
-When a request goes over a rate limit, a `429 Too Many Requests` error and a `Retry-After` header are returned. The `Retry-After` header contains the number of seconds to wait until you can make a request again.
+1. **Read `X-Shopify-Shop-Api-Call-Limit`** on every response; back off above ~35/40.
+2. **Space scheduled jobs** — hourly inventory/order syncs sit well within limits; don't
+   fire all calls on a single cron tick.
+3. **Exponential back-off** on any 429: read `Retry-After`, wait, retry once, then fail
+   with an error log.
+4. **Batch where possible** — use `limit=250` on list endpoints rather than small pages.
 
-### Handling strategy for this project
-
-Rate limits are measured per-app, per-store. For the scheduled sync jobs (Node-cron):
-
-1. **Read the `X-Shopify-Shop-Api-Call-Limit` header** on every response and back off if usage is above ~35/40.
-2. **Space scheduled jobs** — hourly inventory/order syncs are well within limits; don't fire all API calls at once on the cron tick.
-3. **Implement exponential back-off** on any 429 response: read `Retry-After`, wait that many seconds, then retry once before failing with an error log.
-4. **Batch requests where possible** — use `limit=250` on list endpoints rather than paginating with small page sizes.
+Rate limits are measured per-app, per-store.
 
 ---
 
 ## API versioning
 
-Shopify releases new API versions quarterly (`YYYY-01`, `YYYY-04`, `YYYY-07`, `YYYY-10`). The current stable version is **2026-01**. Versions are supported for a minimum of 12 months after release. Pin to a specific version in the base URL and upgrade deliberately — do not use `latest` in production.
+Shopify releases versions quarterly (`YYYY-01`, `-04`, `-07`, `-10`). Current stable:
+**2026-01**. Versions are supported for a minimum of 12 months after release. Pin to a
+specific version in the base URL and upgrade deliberately — never `latest` in production.
 
 ---
 
-## Useful links
+## Credentials checklist (sample → live)
 
-- REST Admin API reference: https://shopify.dev/docs/api/admin-rest
-- Rate limits: https://shopify.dev/docs/api/admin-rest/usage/rate-limits
-- Access scopes: https://shopify.dev/docs/api/usage/access-scopes
-- GraphQL migration guide: https://shopify.dev/docs/api/admin-graphql (for future reference)
+- [ ] `SHOPIFY_SHOP` — the `{shop}` subdomain (e.g. `evolvee-radiance`)
+- [ ] `SHOPIFY_ACCESS_TOKEN` — Admin API access token (shown once on install)
+- [ ] Confirmation that all V1 scopes above are granted on the custom app
+- [ ] Protected customer data access enabled (if PII appears in order responses)
+
+---
+
+## References
+
+- REST Admin API reference: <https://shopify.dev/docs/api/admin-rest>
+- Rate limits: <https://shopify.dev/docs/api/admin-rest/usage/rate-limits>
+- Access scopes: <https://shopify.dev/docs/api/usage/access-scopes>
+- GraphQL migration guide: <https://shopify.dev/docs/api/admin-graphql>
+
+**Related:** `README.md` (integration map)
