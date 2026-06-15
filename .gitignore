@@ -1,21 +1,7 @@
-# Dependencies
 node_modules/
-
-# Environment
 .env
-.env.*
-!.env.example
-
-# Build output
+.env.example
+.ev
 dist/
-build/
-
-# Logs
 *.log
-npm-debug.log*
-
-# Editor / OS
-.vscode/
-.idea/
 .DS_Store
-Thumbs.db
