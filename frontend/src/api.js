@@ -1,6 +1,3 @@
-// Tiny fetch wrapper: attaches the JWT, prefixes the API base URL, and
-// turns error responses into thrown Errors with readable messages.
-
 const BASE = import.meta.env.VITE_API_BASE || '';
 const TOKEN_KEY = 'opshub_token';
 const USER_KEY = 'opshub_user';
