@@ -52,7 +52,7 @@ export default function Login() {
         <div className="login-wrap">
             <div className="login-card">
                 <div className="wordmark">Evolvée Radiance</div>
-                <p className="tag">Operations Hub — sign in to continue</p>
+                <p className="tag">Operations Hub - sign in to continue</p>
 
                 {error && (
                     <div className="banner error">{error}</div>
