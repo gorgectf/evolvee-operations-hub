@@ -117,14 +117,14 @@ async function seed() {
         [luminaId, productIds['ER-SER-001'], pureformId, productIds['ER-BLM-005']]
     );
 
-    console.log('✓ Seed complete.');
+    console.log('O: Seed complete.');
     console.log('  Logins (password for all: radiance123):');
     console.log('    owner@evolveeradiance.com      (admin — sees everything)');
     console.log('    dev@evolveeradiance.com        (developer)');
     console.log('    ops@evolveeradiance.com        (ops manager)');
     console.log('    marketing@evolveeradiance.com  (marketing)');
     console.log('    partner@evolveeradiance.com    (partner)');
-    console.log('  ⚠ Change these passwords before giving anyone real access.');
+    console.log('  !!! Change these passwords before giving anyone real access.');
 }
 
 seed()
