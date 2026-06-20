@@ -1,5 +1,4 @@
-// Catch-all Express error handler - keeps stack traces out of API responses
-// while logging the full error server-side.
+// Catch-all Express error handler - keeps stack traces out of API responses while logging the full error server-side.
 
 function logError(req, errorMessage) {
     const timestamp = new Date().toISOString();
