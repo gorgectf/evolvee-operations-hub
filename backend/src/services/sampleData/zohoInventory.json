@@ -1,0 +1,52 @@
+{
+  "items": [
+    {
+      "sku": "PROD-001",
+      "name": "Product A",
+      "stock_on_hand": 34,
+      "reorder_level": 50
+    },
+    {
+      "sku": "PROD-002",
+      "name": "Product B",
+      "stock_on_hand": 120,
+      "reorder_level": 40
+    },
+    {
+      "sku": "PROD-003",
+      "name": "Product C",
+      "stock_on_hand": 58,
+      "reorder_level": 60
+    },
+    {
+      "sku": "PROD-004",
+      "name": "Product D",
+      "stock_on_hand": 210,
+      "reorder_level": 40
+    },
+    {
+      "sku": "PROD-005",
+      "name": "Product E",
+      "stock_on_hand": 95,
+      "reorder_level": 100
+    },
+    {
+      "sku": "PROD-006",
+      "name": "Product F",
+      "stock_on_hand": 77,
+      "reorder_level": 30
+    },
+    {
+      "sku": "PROD-007",
+      "name": "Product G",
+      "stock_on_hand": 160,
+      "reorder_level": 50
+    },
+    {
+      "sku": "PROD-008",
+      "name": "Product H",
+      "stock_on_hand": 12,
+      "reorder_level": 20
+    }
+  ]
+}

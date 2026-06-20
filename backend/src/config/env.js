@@ -1,50 +1,123 @@
-// Central place for reading environment variables.
-// Every other file imports from here instead of touching process.env directly,
-// so missing/invalid config fails loudly in one place.
 require('dotenv').config();
 
+let nodeEnv = process.env.NODE_ENV;
+if (!nodeEnv) {
+    nodeEnv = 'development';
+}
+const isProduction = nodeEnv === 'production';
+
 function required(name, fallback) {
-    const value = process.env[name] ?? fallback;
+    let value = process.env[name];
+    if (value === undefined || value === null) {
+        value = fallback;
+    }
     if (value === undefined || value === '') {
-        throw new Error(`Missing required environment variable: ${name}. Check your backend/.env file.`);
+        throw new Error('Missing required environment variable: ' + name + '. Check your backend/.env file.');
     }
     return value;
 }
 
+function requiredJwtSecret() {
+    const value = required('JWT_SECRET');
+    const placeholders = [
+        'changeme',
+        'change-me',
+        'secret',
+        'your-secret',
+        'change-me-to-a-long-random-string'
+    ];
+
+    if (isProduction) {
+        const tooShort = value.length < 32;
+        const isPlaceholder = placeholders.includes(value.toLowerCase());
+        if (tooShort || isPlaceholder) {
+            throw new Error('JWT_SECRET is too weak for production. Use a long random string of 32+ characters.');
+        }
+    }
+    return value;
+}
+
+function parseCorsOrigins() {
+    let raw = process.env.CORS_ORIGIN;
+    if (!raw) {
+        raw = 'http://localhost:5173';
+    }
+
+    const origins = raw.split(',');
+    const cleaned = [];
+    for (const origin of origins) {
+        const trimmed = origin.trim().replace(/\/+$/, '');
+        if (trimmed.length > 0) {
+            cleaned.push(trimmed);
+        }
+    }
+    return cleaned;
+}
+
+function envOr(name, fallback) {
+    const value = process.env[name];
+    if (value) {
+        return value;
+    }
+    return fallback;
+}
+
+let portString = process.env.PORT;
+if (!portString) {
+    portString = '4000';
+}
+const port = parseInt(portString, 10);
+
+let autoSeedRaw = process.env.AUTO_SEED;
+if (!autoSeedRaw) {
+    autoSeedRaw = 'false';
+}
+const autoSeed = autoSeedRaw.toLowerCase() === 'true';
+
 const env = {
-    port: parseInt(process.env.PORT || '4000', 10),
-    
-    nodeEnv: process.env.NODE_ENV || 'development',
+    port: port,
+    nodeEnv: nodeEnv,
+    isProduction: isProduction,
     databaseUrl: required('DATABASE_URL'),
-    jwtSecret: required('JWT_SECRET'),
-    jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
-    corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-    stockCheckCron: process.env.STOCK_CHECK_CRON || '0 * * * *',
+    databaseSsl: envOr('DATABASE_SSL', ''),
+    jwtSecret: requiredJwtSecret(),
+    jwtExpiresIn: envOr('JWT_EXPIRES_IN', '8h'),
+    corsOrigins: parseCorsOrigins(),
+    autoSeed: autoSeed,
+    stockCheckCron: envOr('STOCK_CHECK_CRON', '0 * * * *'),
 
     modes: {
-        shopify: process.env.SHOPIFY_MODE || 'sample',
-        zohoInventory: process.env.ZOHO_INVENTORY_MODE || 'sample',
-        zohoBooks: process.env.ZOHO_BOOKS_MODE || 'sample',
-        zohoCrm: process.env.ZOHO_CRM_MODE || 'sample',
-        aftership: process.env.AFTERSHIP_MODE || 'sample',
+        shopify: envOr('SHOPIFY_MODE', 'sample'),
+        zohoInventory: envOr('ZOHO_INVENTORY_MODE', 'sample'),
+        zohoBooks: envOr('ZOHO_BOOKS_MODE', 'sample'),
+        zohoCrm: envOr('ZOHO_CRM_MODE', 'sample'),
+        aftership: envOr('AFTERSHIP_MODE', 'sample'),
+        qrPartner: envOr('QR_PARTNER_MODE', 'placeholder')
     },
 
     shopify: {
-        storeDomain: process.env.SHOPIFY_STORE_DOMAIN || '',
-        adminToken: process.env.SHOPIFY_ADMIN_TOKEN || '',
-        apiVersion: process.env.SHOPIFY_API_VERSION || '2025-04',
+        storeDomain: envOr('SHOPIFY_STORE_DOMAIN', ''),
+        adminToken: envOr('SHOPIFY_ADMIN_TOKEN', ''),
+        apiVersion: envOr('SHOPIFY_API_VERSION', '2025-04')
     },
+
     zoho: {
-        clientId: process.env.ZOHO_CLIENT_ID || '',
-        clientSecret: process.env.ZOHO_CLIENT_SECRET || '',
-        refreshToken: process.env.ZOHO_REFRESH_TOKEN || '',
-        orgId: process.env.ZOHO_ORG_ID || '',
-        accountsBase: process.env.ZOHO_ACCOUNTS_BASE || 'https://accounts.zoho.com',
-        apiBase: process.env.ZOHO_API_BASE || 'https://www.zohoapis.com',
+        clientId: envOr('ZOHO_CLIENT_ID', ''),
+        clientSecret: envOr('ZOHO_CLIENT_SECRET', ''),
+        refreshToken: envOr('ZOHO_REFRESH_TOKEN', ''),
+        orgId: envOr('ZOHO_ORG_ID', ''),
+        accountsBase: envOr('ZOHO_ACCOUNTS_BASE', 'https://accounts.zoho.com'),
+        apiBase: envOr('ZOHO_API_BASE', 'https://www.zohoapis.com')
     },
+
     aftership: {
-        apiKey: process.env.AFTERSHIP_API_KEY || '',
+        apiKey: envOr('AFTERSHIP_API_KEY', '')
     },
+
+    qrPartner: {
+        apiBase: envOr('QR_PARTNER_API_BASE', ''),
+        apiKey: envOr('QR_PARTNER_API_KEY', '')
+    }
 };
 
 module.exports = env;

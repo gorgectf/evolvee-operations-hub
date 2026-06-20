@@ -1,18 +1,26 @@
-// Evolvee Radiance Operations Hub — backend entry point.
-
 const express = require('express');
 const cors = require('cors');
 const env = require('./config/env');
 const { errorHandler } = require('./middleware/errorHandler');
 const { scheduleStockCheck, runStockCheck } = require('./jobs/stockCheck');
+const { ensureSchema } = require('../db/applySchema');
+const { seed } = require('../db/seed');
 
 const app = express();
 
-app.use(cors({ origin: env.corsOrigin }));
+function isAllowedOrigin(origin, callback) {
+    if (!origin) {
+        return callback(null, true);
+    }
+    const normalised = origin.replace(/\/+$/, '');
+    const allowed = env.corsOrigins.includes(normalised);
+    return callback(null, allowed);
+}
+
+app.use(cors({ origin: isAllowedOrigin }));
 app.use(express.json());
 
-// Health check (used by Railway/Render and the troubleshooting guide)
-app.get('/api/health', (req, res) => {
+app.get('/api/health', function (req, res) {
     res.json({ ok: true, time: new Date().toISOString() });
 });
 
@@ -25,18 +33,35 @@ app.use('/api/alerts', require('./routes/alerts'));
 app.use('/api/production-runs', require('./routes/productionRuns'));
 app.use('/api/sync', require('./routes/sync'));
 
-app.use((req, res) => {
-    res.status(404).json({ error: `No route: ${req.method} ${req.originalUrl}` });
+app.use(function (req, res) {
+    res.status(404).json({ error: 'No route: ' + req.method + ' ' + req.originalUrl });
 });
-
 app.use(errorHandler);
 
-app.listen(env.port, () => {
-    console.log(`Operations Hub backend running on http://localhost:${env.port}`);
+async function startBackgroundTasks() {
+    try {
+        await ensureSchema();
+        console.log('Database schema ensured (tables present).');
+    } catch (err) {
+        console.error('Schema check failed on startup:', err.message);
+    }
+
+    if (env.autoSeed) {
+        try {
+            await seed();
+        } catch (err) {
+            console.error('Auto-seed failed on startup:', err.message);
+        }
+    }
+
     scheduleStockCheck();
-    
-    // Run one check on startup so alerts appear immediately in a fresh install.
-    runStockCheck().catch((err) => {
+
+    runStockCheck().catch(function (err) {
         console.error('[stock-check] startup run failed:', err.message);
     });
+}
+
+app.listen(env.port, function () {
+    console.log('Operations Hub backend running on port ' + env.port);
+    startBackgroundTasks();
 });

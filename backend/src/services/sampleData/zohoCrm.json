@@ -1,0 +1,34 @@
+{
+  "customers": [
+    {
+      "crm_id": "CRM-501",
+      "email": "customer001@example.com",
+      "segment": "VIP",
+      "lifetime_notes": "Repeat purchaser, joined loyalty scheme"
+    },
+    {
+      "crm_id": "CRM-502",
+      "email": "customer002@example.com",
+      "segment": "VIP",
+      "lifetime_notes": "Active subscription customer"
+    },
+    {
+      "crm_id": "CRM-503",
+      "email": "customer003@example.com",
+      "segment": "Regular",
+      "lifetime_notes": ""
+    },
+    {
+      "crm_id": "CRM-504",
+      "email": "customer004@example.com",
+      "segment": "Regular",
+      "lifetime_notes": "Referred additional customers"
+    },
+    {
+      "crm_id": "CRM-505",
+      "email": "customer005@example.com",
+      "segment": "New",
+      "lifetime_notes": "New customer"
+    }
+  ]
+}

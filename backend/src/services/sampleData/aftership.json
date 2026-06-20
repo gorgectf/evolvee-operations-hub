@@ -1,0 +1,52 @@
+{
+  "trackings": [
+    {
+      "tracking_number": "RM100000001GB",
+      "order_id": "#1001",
+      "courier": "royal-mail",
+      "status": "Delivered",
+      "customer": "Customer001",
+      "last_update": "2026-06-09"
+    },
+    {
+      "tracking_number": "RM100000002GB",
+      "order_id": "#1002",
+      "courier": "royal-mail",
+      "status": "InTransit",
+      "customer": "Customer002",
+      "last_update": "2026-06-10"
+    },
+    {
+      "tracking_number": "EV100000003GB",
+      "order_id": "#1003",
+      "courier": "evri",
+      "status": "OutForDelivery",
+      "customer": "Customer003",
+      "last_update": "2026-06-11"
+    },
+    {
+      "tracking_number": "RM100000004GB",
+      "order_id": "#1004",
+      "courier": "royal-mail",
+      "status": "InfoReceived",
+      "customer": "Customer004",
+      "last_update": "2026-06-10"
+    },
+    {
+      "tracking_number": "DP100000005GB",
+      "order_id": "#1005",
+      "courier": "dpd",
+      "status": "Exception",
+      "customer": "Customer005",
+      "last_update": "2026-06-09"
+    },
+    {
+      "tracking_number": "RM100000006GB",
+      "order_id": "#1006",
+      "courier": "royal-mail",
+      "status": "InTransit",
+      "customer": "Customer006",
+      "last_update": "2026-06-11"
+    }
+  ]
+}

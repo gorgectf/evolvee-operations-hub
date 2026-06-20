@@ -1,0 +1,10 @@
+{
+  "monthly_revenue": [
+    { "month": "Month1", "revenue": 31200.00 },
+    { "month": "Month2", "revenue": 28950.50 },
+    { "month": "Month3", "revenue": 35480.75 },
+    { "month": "Month4", "revenue": 38110.00 },
+    { "month": "Month5", "revenue": 41875.25 },
+    { "month": "Month6", "revenue": 16351.25 }
+  ]
+}

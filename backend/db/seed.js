@@ -14,11 +14,10 @@ async function seed() {
     const existing = await query('SELECT COUNT(*)::int AS n FROM users');
 
     if (existing.rows[0].n > 0) {
-        console.log('Database already has users — skipping seed. (Delete and recreate the database to re-seed.)');
+        console.log('Database already has users - skipping seed. (Delete and recreate the database to re-seed.)');
         return;
     }
 
-    // ── Users (one per role). CHANGE THESE PASSWORDS before real use. ──
     await query(
         `INSERT INTO users (email, password_hash, full_name, role) VALUES
          ('owner@evolveeradiance.com',     $1, 'Shontayvia (Owner)',    'admin'),
@@ -29,10 +28,9 @@ async function seed() {
         [hashPassword('radiance123')]
     );
 
-    // ── Manufacturers + contacts ──
     const manufacturerResult = await query(
         `INSERT INTO manufacturers (name, country, notes) VALUES
-         ('Lumina Labs Ltd',    'United Kingdom', 'Primary serum and oil manufacturer. 4–6 week lead time.'),
+         ('Lumina Labs Ltd',    'United Kingdom', 'Primary serum and oil manufacturer. 4-6 week lead time.'),
          ('PureForm Cosmetics', 'France',         'Creams and balms. Minimum order 500 units per SKU.'),
          ('GlowPack Packaging', 'China',          'Bottles, jars, and outer packaging. 8 week lead time by sea.')
          RETURNING id`
@@ -127,11 +125,15 @@ async function seed() {
     console.log('  !!! Change these passwords before giving anyone real access.');
 }
 
-seed()
-    .catch((err) => {
-        console.error('✗ Seed failed:', err.message);
-        process.exitCode = 1;
-    })
-    .finally(() => {
-        pool.end();
-    });
+if (require.main === module) {
+    seed()
+        .catch((err) => {
+            console.error('✗ Seed failed:', err.message);
+            process.exitCode = 1;
+        })
+        .finally(() => {
+            pool.end();
+        });
+}
+
+module.exports = { seed };

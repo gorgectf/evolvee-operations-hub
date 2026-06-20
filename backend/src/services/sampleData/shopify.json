@@ -1,0 +1,131 @@
+{
+  "products": [
+    {
+      "sku": "PROD-001",
+      "title": "Product A",
+      "units_sold_30d": 412,
+      "revenue_30d": 14008.00
+    },
+    {
+      "sku": "PROD-002",
+      "title": "Product B",
+      "units_sold_30d": 268,
+      "revenue_30d": 7504.00
+    },
+    {
+      "sku": "PROD-003",
+      "title": "Product C",
+      "units_sold_30d": 305,
+      "revenue_30d": 9760.00
+    },
+    {
+      "sku": "PROD-004",
+      "title": "Product D",
+      "units_sold_30d": 84,
+      "revenue_30d": 3192.00
+    },
+    {
+      "sku": "PROD-005",
+      "title": "Product E",
+      "units_sold_30d": 530,
+      "revenue_30d": 4240.00
+    },
+    {
+      "sku": "PROD-006",
+      "title": "Product F",
+      "units_sold_30d": 61,
+      "revenue_30d": 1830.00
+    },
+    {
+      "sku": "PROD-007",
+      "title": "Product G",
+      "units_sold_30d": 149,
+      "revenue_30d": 2682.00
+    },
+    {
+      "sku": "PROD-008",
+      "title": "Product H",
+      "units_sold_30d": 73,
+      "revenue_30d": 5840.00
+    }
+  ],
+  "customers": [
+    {
+      "id": "C-1001",
+      "name": "Customer001",
+      "email": "customer001@example.com",
+      "orders_count": 14,
+      "total_spent": 1240.50
+    },
+    {
+      "id": "C-1002",
+      "name": "Customer002",
+      "email": "customer002@example.com",
+      "orders_count": 11,
+      "total_spent": 1015.00
+    },
+    {
+      "id": "C-1003",
+      "name": "Customer003",
+      "email": "customer003@example.com",
+      "orders_count": 9,
+      "total_spent": 870.25
+    },
+    {
+      "id": "C-1004",
+      "name": "Customer004",
+      "email": "customer004@example.com",
+      "orders_count": 8,
+      "total_spent": 792.00
+    },
+    {
+      "id": "C-1005",
+      "name": "Customer005",
+      "email": "customer005@example.com",
+      "orders_count": 7,
+      "total_spent": 655.75
+    }
+  ],
+  "revenue_daily": [
+    {
+      "date": "2026-06-01",
+      "revenue": 1480.00
+    },
+    {
+      "date": "2026-06-02",
+      "revenue": 1295.50
+    },
+    {
+      "date": "2026-06-03",
+      "revenue": 1610.25
+    },
+    {
+      "date": "2026-06-04",
+      "revenue": 1422.00
+    },
+    {
+      "date": "2026-06-05",
+      "revenue": 1888.75
+    },
+    {
+      "date": "2026-06-06",
+      "revenue": 2140.00
+    },
+    {
+      "date": "2026-06-07",
+      "revenue": 1975.50
+    },
+    {
+      "date": "2026-06-08",
+      "revenue": 1380.00
+    },
+    {
+      "date": "2026-06-09",
+      "revenue": 1512.25
+    },
+    {
+      "date": "2026-06-10",
+      "revenue": 1647.00
+    }
+  ]
+}
