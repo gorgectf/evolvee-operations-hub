@@ -4,29 +4,53 @@
 
 const { query } = require('../config/db');
 
-async function callExternal(url, options = {}, { timeoutMs = 15000 } = {}) {
+function getHost(url) {
+    const parsed = new URL(url);
+    return parsed.host;
+}
+
+async function callExternal(url, options = {}, config = {}) {
+    let timeoutMs = config.timeoutMs;
+    if (timeoutMs === undefined) {
+        timeoutMs = 15000;
+    }
+
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    function abortRequest() {
+        controller.abort();
+    }
+
+    const timer = setTimeout(abortRequest, timeoutMs);
 
     try {
-        const res = await fetch(url, { ...options, signal: controller.signal });
+        const requestOptions = Object.assign({}, options);
+        requestOptions.signal = controller.signal;
 
-        if (!res.ok) {
-            const body = await res.text().catch(() => '');
-            const host = new URL(url).host;
+        const response = await fetch(url, requestOptions);
+
+        if (!response.ok) {
+            let body = '';
+            try {
+                body = await response.text();
+            } catch (readError) {
+                body = '';
+            }
+
+            const host = getHost(url);
             const preview = body.slice(0, 200);
-            throw new Error(`HTTP ${res.status} from ${host}: ${preview}`);
+            throw new Error(`HTTP ${response.status} from ${host}: ${preview}`);
         }
 
-        return await res.json();
-    } catch (err) {
-        if (err.name === 'AbortError') {
-            const host = new URL(url).host;
+        return await response.json();
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            const host = getHost(url);
             const seconds = timeoutMs / 1000;
             throw new Error(`Request to ${host} timed out after ${seconds}s`);
         }
-        
-        throw err;
+
+        throw error;
     } finally {
         clearTimeout(timer);
     }
@@ -46,9 +70,11 @@ async function recordSync(source, mode, ok, message = null) {
             message      = $4
     `;
 
-    await query(sql, [source, mode, ok, message]).catch(function onSyncError(err) {
-        console.error('Failed to record sync status:', err.message);
-    });
+    try {
+        await query(sql, [source, mode, ok, message]);
+    } catch (error) {
+        console.error('Failed to record sync status:', error.message);
+    }
 }
 
 module.exports = { callExternal, recordSync };
