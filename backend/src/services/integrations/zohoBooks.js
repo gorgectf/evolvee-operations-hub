@@ -6,6 +6,11 @@ const sample = require('../sampleData/zohoBooks.json');
 async function getMonthlyRevenue() {
     const mode = env.modes.zohoBooks;
 
+    if (mode === 'off') {
+        await recordSync('zoho_books', 'off', true);
+        return [];
+    }
+
     try {
         let months;
 

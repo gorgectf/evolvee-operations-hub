@@ -6,6 +6,11 @@ const sample = require('../sampleData/zohoCrm.json');
 async function getCrmCustomers() {
     const mode = env.modes.zohoCrm;
 
+    if (mode === 'off') {
+        await recordSync('zoho_crm', 'off', true);
+        return [];
+    }
+
     try {
         let customers;
 

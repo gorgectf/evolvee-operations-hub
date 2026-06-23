@@ -16,6 +16,11 @@ function base() {
 async function getSalesOverview() {
     const mode = env.modes.shopify;
 
+    if (mode === 'off') {
+        await recordSync('shopify', 'off', true);
+        return [];
+    }
+
     try {
         let products;
 
@@ -80,6 +85,11 @@ async function getSalesOverview() {
 async function getTopCustomers() {
     const mode = env.modes.shopify;
 
+    if (mode === 'off') {
+        await recordSync('shopify', 'off', true);
+        return [];
+    }
+
     try {
         let customers;
 
@@ -128,6 +138,11 @@ async function getTopCustomers() {
 
 async function getDailyRevenue() {
     const mode = env.modes.shopify;
+
+    if (mode === 'off') {
+        await recordSync('shopify', 'off', true);
+        return [];
+    }
 
     try {
         let daily;

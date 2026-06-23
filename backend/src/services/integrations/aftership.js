@@ -5,6 +5,11 @@ const sample = require('../sampleData/aftership.json');
 async function getTrackings() {
     const mode = env.modes.aftership;
 
+    if (mode === 'off') {
+        await recordSync('aftership', 'off', true);
+        return [];
+    }
+
     try {
         let trackings;
 

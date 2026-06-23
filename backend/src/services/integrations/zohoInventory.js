@@ -6,6 +6,11 @@ const sample = require('../sampleData/zohoInventory.json');
 async function getStockLevels() {
     const mode = env.modes.zohoInventory;
 
+    if (mode === 'off') {
+        await recordSync('zoho_inventory', 'off', true);
+        return [];
+    }
+
     try {
         let items;
 
