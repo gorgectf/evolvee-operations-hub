@@ -9,6 +9,7 @@ import Products from './pages/Products.jsx';
 import Alerts from './pages/Alerts.jsx';
 import ProductionRuns from './pages/ProductionRuns.jsx';
 import Users from './pages/Users.jsx';
+import Account from './pages/Account.jsx';
 
 function RequireAuth({ children }) {
     if (!getToken()) {
@@ -64,6 +65,7 @@ function Shell({ children }) {
                         <span>
                             {user?.name} · {user?.role?.replace('_', ' ')}
                         </span>
+                        <NavLink to="/account">Account</NavLink>
                         <button
                             onClick={() => {
                                 clearSession();
@@ -152,6 +154,16 @@ export default function App() {
                     <RequireAuth>
                         <Shell>
                             <Users />
+                        </Shell>
+                    </RequireAuth>
+                }
+            />
+            <Route
+                path="/account"
+                element={
+                    <RequireAuth>
+                        <Shell>
+                            <Account />
                         </Shell>
                     </RequireAuth>
                 }

@@ -79,4 +79,31 @@ router.get('/me', authenticate, (req, res) => {
     res.json({ user: user });
 });
 
+router.post('/password', authenticate, asyncRoute(async (req, res) => {
+    const body = req.body || {};
+    const currentPassword = body.current_password;
+    const newPassword = body.new_password;
+
+    if (!currentPassword || !newPassword) {
+        return res.status(400).json({ error: 'Current and new password are required.' });
+    }
+    if (String(newPassword).length < 8) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+    }
+
+    const result = await query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
+    const user = result.rows[0];
+    if (!user) {
+        return res.status(404).json({ error: 'User not found.' });
+    }
+    
+    if (!bcrypt.compareSync(currentPassword, user.password_hash)) {
+        return res.status(400).json({ error: 'Current password is incorrect.' });
+    }
+
+    const newHash = bcrypt.hashSync(newPassword, 10);
+    await query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, req.user.id]);
+    res.json({ ok: true });
+}));
+
 module.exports = router;

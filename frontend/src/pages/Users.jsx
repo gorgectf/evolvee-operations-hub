@@ -42,6 +42,19 @@ export default function Users() {
         }
     }
 
+    function resetPassword(user) {
+        const pwd = window.prompt(`New password for ${user.email} (min 8 chars):`);
+        if (pwd === null) {
+            return;
+        }
+        if (pwd.length < 8) {
+            setError('Password must be at least 8 characters.');
+            return;
+        }
+        setError('');
+        patchUser(user.id, { password: pwd });
+    }
+
     function renderRoleOptions() {
         return ROLES.map((role) => (
             <option key={role} value={role}>{role.replace('_', ' ')}</option>
@@ -76,6 +89,10 @@ export default function Users() {
                         onClick={() => patchUser(user.id, { is_active: !user.is_active })}
                     >
                         {user.is_active ? 'Deactivate' : 'Reactivate'}
+                    </button>
+                    {' · '}
+                    <button className="link" onClick={() => resetPassword(user)}>
+                        Reset password
                     </button>
                 </td>
             </tr>
