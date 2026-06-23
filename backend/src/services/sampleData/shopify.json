@@ -1,50 +1,50 @@
 {
   "products": [
     {
-      "sku": "PROD-001",
-      "title": "Product A",
+      "sku": "ER-SER-001",
+      "title": "Radiance Renewal Serum 30ml",
       "units_sold_30d": 412,
       "revenue_30d": 14008.00
     },
     {
-      "sku": "PROD-002",
-      "title": "Product B",
+      "sku": "ER-OIL-002",
+      "title": "Golden Glow Face Oil 25ml",
       "units_sold_30d": 268,
       "revenue_30d": 7504.00
     },
     {
-      "sku": "PROD-003",
-      "title": "Product C",
+      "sku": "ER-CRM-003",
+      "title": "Hydra-Silk Day Cream 50ml",
       "units_sold_30d": 305,
       "revenue_30d": 9760.00
     },
     {
-      "sku": "PROD-004",
-      "title": "Product D",
+      "sku": "ER-CRM-004",
+      "title": "Night Repair Cream 50ml",
       "units_sold_30d": 84,
       "revenue_30d": 3192.00
     },
     {
-      "sku": "PROD-005",
-      "title": "Product E",
+      "sku": "ER-BLM-005",
+      "title": "Soothing Lip Balm 10ml",
       "units_sold_30d": 530,
       "revenue_30d": 4240.00
     },
     {
-      "sku": "PROD-006",
-      "title": "Product F",
+      "sku": "ER-MSK-006",
+      "title": "Clay Detox Mask 75ml",
       "units_sold_30d": 61,
       "revenue_30d": 1830.00
     },
     {
-      "sku": "PROD-007",
-      "title": "Product G",
+      "sku": "ER-TNR-007",
+      "title": "Rosewater Toner 100ml",
       "units_sold_30d": 149,
       "revenue_30d": 2682.00
     },
     {
-      "sku": "PROD-008",
-      "title": "Product H",
+      "sku": "ER-KIT-008",
+      "title": "Starter Ritual Kit",
       "units_sold_30d": 73,
       "revenue_30d": 5840.00
     }

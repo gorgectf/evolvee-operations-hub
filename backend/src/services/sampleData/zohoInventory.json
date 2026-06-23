@@ -1,50 +1,50 @@
 {
   "items": [
     {
-      "sku": "PROD-001",
-      "name": "Product A",
+      "sku": "ER-SER-001",
+      "name": "Radiance Renewal Serum 30ml",
       "stock_on_hand": 34,
       "reorder_level": 50
     },
     {
-      "sku": "PROD-002",
-      "name": "Product B",
+      "sku": "ER-OIL-002",
+      "name": "Golden Glow Face Oil 25ml",
       "stock_on_hand": 120,
       "reorder_level": 40
     },
     {
-      "sku": "PROD-003",
-      "name": "Product C",
+      "sku": "ER-CRM-003",
+      "name": "Hydra-Silk Day Cream 50ml",
       "stock_on_hand": 58,
       "reorder_level": 60
     },
     {
-      "sku": "PROD-004",
-      "name": "Product D",
+      "sku": "ER-CRM-004",
+      "name": "Night Repair Cream 50ml",
       "stock_on_hand": 210,
       "reorder_level": 40
     },
     {
-      "sku": "PROD-005",
-      "name": "Product E",
+      "sku": "ER-BLM-005",
+      "name": "Soothing Lip Balm 10ml",
       "stock_on_hand": 95,
       "reorder_level": 100
     },
     {
-      "sku": "PROD-006",
-      "name": "Product F",
+      "sku": "ER-MSK-006",
+      "name": "Clay Detox Mask 75ml",
       "stock_on_hand": 77,
       "reorder_level": 30
     },
     {
-      "sku": "PROD-007",
-      "name": "Product G",
+      "sku": "ER-TNR-007",
+      "name": "Rosewater Toner 100ml",
       "stock_on_hand": 160,
       "reorder_level": 50
     },
     {
-      "sku": "PROD-008",
-      "name": "Product H",
+      "sku": "ER-KIT-008",
+      "name": "Starter Ritual Kit",
       "stock_on_hand": 12,
       "reorder_level": 20
     }

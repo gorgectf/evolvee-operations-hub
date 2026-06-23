@@ -151,7 +151,10 @@ router.patch('/:id', asyncRoute(async (req, res) => {
 
 router.delete('/:id', asyncRoute(async (req, res) => {
     const id = Number(req.params.id);
-    await query('DELETE FROM manufacturers WHERE id = $1', [id]);
+    const result = await query('DELETE FROM manufacturers WHERE id = $1', [id]);
+    if (result.rowCount === 0) {
+        return res.status(404).json({ error: 'Manufacturer not found.' });
+    }
     res.json({ ok: true });
 }));
 

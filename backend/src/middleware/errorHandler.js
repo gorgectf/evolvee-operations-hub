@@ -5,19 +5,30 @@ function logError(req, errorMessage) {
     console.error(`[${timestamp}] ${req.method} ${req.originalUrl} —`, errorMessage);
 }
 
-function resolveErrorMessage(status, originalMessage) {
-    if (status === 500) {
-        return 'Something went wrong on the server.';
-    }
-    
-    return originalMessage;
-}
 
-function errorHandler(err, req, res, next) { // eslint-disable-line no-unused-vars
+const PG_ERROR_RESPONSES = {
+    '23505': { status: 409, message: 'That value is already in use.' },
+    '23503': { status: 400, message: 'A referenced record does not exist.' },
+    '23502': { status: 400, message: 'A required field is missing.' },
+    '23514': { status: 400, message: 'A value did not meet a database constraint.' },
+    '22P02': { status: 400, message: 'A value in the request was not valid.' },
+    '22003': { status: 400, message: 'A number in the request is out of range.' }, 
+};
+
+function errorHandler(err, req, res, next) {
     logError(req, err.message);
 
-    const status = err.status || 500;
-    const responseMessage = resolveErrorMessage(status, err.message);
+    const mapped = err.code ? PG_ERROR_RESPONSES[err.code] : undefined;
+    const status = mapped ? mapped.status : (err.status || 500);
+
+    let responseMessage;
+    if (mapped) {
+        responseMessage = mapped.message;
+    } else if (status === 500) {
+        responseMessage = 'Something went wrong on the server.';
+    } else {
+        responseMessage = err.message;
+    }
 
     res.status(status).json({ error: responseMessage });
 }

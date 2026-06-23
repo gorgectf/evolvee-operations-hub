@@ -32,6 +32,15 @@ router.post('/', asyncRoute(async (req, res) => {
         return res.status(400).json({ error: 'sku and name are required.' });
     }
 
+    let thresholdValue = null;
+    if (threshold !== undefined && threshold !== null && threshold !== '') {
+        const n = Number(threshold);
+        if (!Number.isFinite(n) || n < 0) {
+            return res.status(400).json({ error: 'threshold must be a number of 0 or more.' });
+        }
+        thresholdValue = n;
+    }
+
     let manufacturerIdValue = null;
     if (manufacturerId) {
         manufacturerIdValue = manufacturerId;
@@ -44,14 +53,14 @@ router.post('/', asyncRoute(async (req, res) => {
     const productResult = await query(insertProductSql, [sku.trim(), name, manufacturerIdValue]);
     const product = productResult.rows[0];
 
-    if (threshold !== undefined && threshold !== null) {
+    if (thresholdValue !== null) {
         const thresholdSql =
             'INSERT INTO reorder_thresholds (product_id, threshold) ' +
             'VALUES ($1, $2) ' +
             'ON CONFLICT (product_id) DO UPDATE ' +
             '    SET threshold = $2, updated_at = NOW()';
 
-        await query(thresholdSql, [product.id, Number(threshold)]);
+        await query(thresholdSql, [product.id, thresholdValue]);
     }
 
     res.status(201).json({ product: product });
