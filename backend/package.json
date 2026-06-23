@@ -1,7 +1,7 @@
 {
   "name": "operations-hub-backend",
-  "version": "x.0.0",
-  "description": "Evolvee Radiance Operations Hub - backend API (v1 scope)",
+  "version": "0.5.0",
+  "description": "Evolvee Radiance Operations Hub Backend",
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {
