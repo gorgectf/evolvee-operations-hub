@@ -1,0 +1,78 @@
+# Render Blueprint — Operations Hub backend + database
+# Reference: https://render.com/docs/blueprint-spec
+#
+# Deploy with: Render Dashboard -> New -> Blueprint -> connect this repo.
+# This file must live at the REPOSITORY ROOT (Render's convention). Unlike Railway,
+# the deploy config does NOT live inside backend/.
+
+databases:
+    - name: operations-hub-db
+      databaseName: operations_hub
+      user: opshub
+      plan: free            # Free Postgres EXPIRES 30 days after creation (then a 14-day
+                            # grace period to upgrade before the data is deleted), is
+                            # capped at 1 GB, and has no backups. Change to basic-256mb or
+                            # higher before relying on this for real data.
+      region: frankfurt     # Closest EU region to the UK. Change if you prefer another.
+
+services:
+    - type: web
+      name: operations-hub-api
+      runtime: node
+      rootDir: backend      # The repo root has no package.json; the app lives in backend/.
+      plan: free            # Free web services spin down after ~15 min idle (~1 min cold
+                            # start on the next request). Use starter or higher to keep an
+                            # internal tool always-on.
+      region: frankfurt     # Match the database's region so they share Render's private
+                            # network.
+      buildCommand: npm install
+      startCommand: npm start
+      healthCheckPath: /api/health
+      envVars:
+          # Database connection — wired automatically from the Postgres instance above.
+          - key: DATABASE_URL
+            fromDatabase:
+                name: operations-hub-db
+                property: connectionString
+
+          # Auth — Render generates a strong value once and keeps it. This satisfies the
+          # production strength check (32+ chars, never a placeholder). Do NOT hardcode a
+          # secret here.
+          - key: JWT_SECRET
+            generateValue: true
+          - key: JWT_EXPIRES_IN
+            value: 8h
+
+          - key: NODE_ENV
+            value: production
+
+          # Your Netlify URL, e.g. https://your-site.netlify.app — you are prompted for
+          # this during Blueprint creation. A trailing slash is fine; comma-separate
+          # multiple origins.
+          - key: CORS_ORIGIN
+            sync: false
+
+          # Do NOT add a PORT variable. Render injects its own PORT and the backend
+          # already reads process.env.PORT; setting one here causes "no open ports
+          # detected".
+
+          # Seed the demo accounts on the first boot against an empty database. Seeding is
+          # guarded (it skips a non-empty DB), so this is safe to leave as-is; set it to
+          # false on the service's Environment page once the first deploy has seeded.
+          - key: AUTO_SEED
+            value: "true"
+
+          # External integrations — leave on sample/placeholder until credentials arrive,
+          # then switch one source at a time.
+          - key: SHOPIFY_MODE
+            value: sample
+          - key: ZOHO_INVENTORY_MODE
+            value: sample
+          - key: ZOHO_BOOKS_MODE
+            value: sample
+          - key: ZOHO_CRM_MODE
+            value: sample
+          - key: AFTERSHIP_MODE
+            value: sample
+          - key: QR_PARTNER_MODE
+            value: placeholder

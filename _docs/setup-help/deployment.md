@@ -1,4 +1,4 @@
-# Step 8 — Deploying (Netlify + Railway)
+# Step 8 — Deploying (Netlify + Render)
 
 ← [Back to README](../../README.md)
 
@@ -22,41 +22,82 @@ git push -u origin main
 
 `.gitignore` already excludes `node_modules` and `.env` — **never commit `.env`**.
 
+> `render.yaml` lives at the **repository root** (next to `netlify.toml`) and must be
+> committed for the steps below — it's how Render knows what to build.
+
 ---
 
-## 8.2 Backend on Railway
+## 8.2 Backend on Render
 
-1. In Railway, create a project → **Deploy from GitHub repo** → pick the repo.
-2. **Set the service root directory to `backend`.** This is required — the repo root has
-   no `package.json`, so Railway can't detect the app without it. (`backend/railway.json`
-   then pins the build command, start command, and `/api/health` health check
-   automatically.)
-3. Add a **PostgreSQL** database in the same project. In the backend service's variables,
-   add `DATABASE_URL` as a reference to the Postgres service's connection string.
-4. Set the rest of the environment variables (from `.env.example`):
-   - `JWT_SECRET` — a **strong** value. In production the backend refuses to start if
-     this is missing, under 32 characters, or a placeholder. Generate one with:
-     ```powershell
-     node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-     ```
+The repo includes a `render.yaml` Blueprint at the root that defines the backend web
+service **and** its PostgreSQL database together, so Render provisions both in one step.
+
+1. In the Render Dashboard: **New → Blueprint**, then **Connect** the repo. (Connect your
+   GitHub account first if you haven't.)
+2. Render reads `render.yaml` and lists the resources it will create: the
+   `operations-hub-api` web service and the `operations-hub-db` Postgres database.
+3. You're prompted for the environment variables marked `sync: false`. Set:
    - `CORS_ORIGIN` — your Netlify URL, e.g. `https://your-site.netlify.app`. A trailing
-     slash is fine (it's ignored), and you can list several origins comma-separated.
-   - The `*_MODE` switches (leave at `sample`/`placeholder` until credentials arrive).
-   - `NODE_ENV=production` is recommended. **SSL to the database does not depend on it**
-     — the backend auto-enables SSL for any non-local database host, so Railway Postgres
-     connects over SSL automatically. (If you ever need to force it, set
-     `DATABASE_SSL=true` or `false`.)
-5. **Database tables are created automatically** on first boot (the idempotent schema
-   runs at startup), so there's no manual schema step. You only need to create the
-   demo/login accounts once. Easiest: set `AUTO_SEED=true` in the variables for the
-   first deploy — the backend seeds the demo users when it sees an empty database — then
-   set it back to `false`. (Alternatively, run `npm run db:seed` once against Railway's
-   **public** `DATABASE_URL` from your machine.)
-6. Note the public backend URL Railway assigns (e.g.
-   `https://your-app.up.railway.app`).
+     slash is fine (it's ignored), and you can list several origins comma-separated. If
+     you don't have the final Netlify URL yet, enter a placeholder and correct it after
+     step 8.3.
+4. Click **Apply** to deploy the Blueprint. Render builds the service and creates the
+   database.
+
+What the Blueprint already handles, so you don't set it by hand:
+   - **`DATABASE_URL`** is wired to the new Postgres instance automatically
+     (`fromDatabase`).
+   - **`JWT_SECRET`** is generated once by Render and kept (`generateValue: true`) — it's
+     long and random, so it passes the production strength check (32+ chars, no
+     placeholder). Nothing to paste.
+   - **Tables are created automatically** on first boot (the idempotent schema runs at
+     startup) — there's no manual schema step.
+   - **Demo accounts are seeded** on the first boot because `AUTO_SEED=true`. Seeding only
+     runs against an empty database, so it can't create duplicates. Once the first deploy
+     has seeded, set `AUTO_SEED` to `false` on the service's **Environment** page.
+   - **Health checks** hit `/api/health`, and **SSL to the database** is enabled
+     automatically (the backend turns SSL on for any non-local host — Render Postgres
+     included).
+   - **Do not add a `PORT` variable.** Render assigns the port itself and the backend
+     already reads it from the environment; setting `PORT` can cause a "no open ports
+     detected" deploy failure.
+
+5. When the deploy is green, note the public backend URL Render assigns, e.g.
+   `https://operations-hub-api.onrender.com`. You'll need it for Netlify in 8.3.
 
 > **Change the seeded passwords immediately** — they all start as `radiance123`. Sign in
 > as the admin and update them on the Team Members page.
+
+### Free instance types — read before go-live
+
+`render.yaml` ships with `plan: free` for both the service and the database so you can
+deploy at no cost, but the free tier has limits that matter for an always-on internal
+tool:
+   - **Free web services spin down after ~15 minutes of inactivity** and take roughly a
+     minute to cold-start on the next request.
+   - **Free PostgreSQL databases expire 30 days after creation** (with a 14-day grace
+     period to upgrade before the data is deleted), are capped at 1 GB, and have no
+     backups.
+
+Before relying on this in production, raise the `plan` field in `render.yaml` for each
+resource — `basic-256mb` is the smallest paid Postgres instance, and `starter` or higher
+keeps the web service always-on — then commit and push to re-sync the Blueprint.
+
+### Alternative: configure in the Dashboard without the Blueprint
+
+If you'd rather not use `render.yaml`, create the pieces manually instead:
+   1. **New → PostgreSQL**, pick a region, and create it. Copy its **Internal Database
+      URL**.
+   2. **New → Web Service**, connect the repo, and set: **Root Directory** = `backend`,
+      **Build Command** = `npm install`, **Start Command** = `npm start`, **Health Check
+      Path** = `/api/health`.
+   3. Under the service's **Environment**, add `DATABASE_URL` (the Internal Database URL),
+      `JWT_SECRET` (a strong 32+ char value — generate one with the command below),
+      `NODE_ENV=production`, `CORS_ORIGIN`, `AUTO_SEED=true` for the first deploy, and the
+      `*_MODE` switches (`sample`/`placeholder`). Do **not** set `PORT`.
+      ```powershell
+      node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+      ```
 
 ---
 
@@ -66,21 +107,26 @@ git push -u origin main
 2. `netlify.toml` at the repo root already sets `base = frontend`, `publish = dist`
    (which resolves to `frontend/dist`), and the SPA redirect — Netlify picks it up
    automatically.
-3. Add one environment variable: `VITE_API_BASE` = your Railway backend URL (no
-   trailing slash).
-4. Deploy. Then confirm Railway's `CORS_ORIGIN` matches your final Netlify URL.
+3. Add one environment variable: `VITE_API_BASE` = your Render backend URL (no trailing
+   slash), e.g. `https://operations-hub-api.onrender.com`.
+4. Deploy. Then confirm the backend's `CORS_ORIGIN` matches your final Netlify URL (update
+   it on the Render service's **Environment** page if it changed).
 
 ---
 
 ## 8.4 Post-deploy checklist
 
-- [ ] Railway service **root directory = `backend`**
-- [ ] `DATABASE_URL` referenced from the Postgres service
-- [ ] Strong unique `JWT_SECRET` in Railway (32+ chars)
+- [ ] `render.yaml` committed at the **repo root**
+- [ ] Blueprint applied — `operations-hub-api` service and `operations-hub-db` database
+      created
+- [ ] `CORS_ORIGIN` (Render) ↔ Netlify URL match
+- [ ] `JWT_SECRET` present (auto-generated by Render; 32+ chars)
 - [ ] Demo accounts seeded once (`AUTO_SEED=true` for first boot, then back to `false`)
 - [ ] **Seed passwords changed** from default
-- [ ] `CORS_ORIGIN` (Railway) ↔ Netlify URL match
-- [ ] `VITE_API_BASE` (Netlify) → Railway URL
+- [ ] No `PORT` variable set on the service
+- [ ] `VITE_API_BASE` (Netlify) → Render backend URL
+- [ ] Paid `plan` set for both resources before production use (free Postgres expires
+      after 30 days)
 - [ ] Add real API credentials per source as they arrive
 
 ---

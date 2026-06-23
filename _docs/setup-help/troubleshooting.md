@@ -74,9 +74,11 @@ Or use the Services app: Win+R → `services.msc` → find "postgresql-x64-16" �
 ## CORS error in the browser console
 
 Locally this shouldn't happen (the Vite proxy avoids CORS entirely). In production it
-means Railway's `CORS_ORIGIN` doesn't match your Netlify URL — check the protocol
+means Render's `CORS_ORIGIN` doesn't match your Netlify URL — check the protocol
 (`https://`) and the subdomain. A trailing slash no longer matters (it's normalised
-away), and you can list multiple origins comma-separated.
+away), and you can list multiple origins comma-separated. After changing `CORS_ORIGIN` on
+the Render service's **Environment** page, the service redeploys before the new value
+takes effect.
 
 ---
 
@@ -92,8 +94,19 @@ verifying the token (e.g. you restarted with a different `.env`) — log in agai
 
 When `NODE_ENV=production`, the backend refuses to boot with a missing, placeholder, or
 short (`< 32` chars) `JWT_SECRET`, because a weak secret lets anyone forge a login
-token. Set a long random value (see step 8.2) and redeploy. Locally (no
+token. Set a long random value (see step 8.2) and redeploy. On Render, the Blueprint's
+`generateValue: true` already provides a strong secret automatically. Locally (no
 `NODE_ENV=production`) this check is relaxed.
+
+---
+
+## Render deploy hangs on "No open ports detected"
+
+Render assigns the port via its own `PORT` variable and routes traffic to it, so your
+service must listen on that port. The backend already reads `process.env.PORT`, so the
+fix is usually to **remove any `PORT` variable you added** (e.g. `4000`) and redeploy — it
+then uses the port Render provides. If you ever customise the server startup, make sure it
+binds to `0.0.0.0`, not `127.0.0.1`.
 
 ---
 
@@ -103,7 +116,9 @@ Managed Postgres requires SSL. The backend turns SSL on automatically for any no
 host, so this normally just works. If you see an SSL-related connection error, set
 `DATABASE_SSL=true` explicitly; if you're on a host that must *not* use SSL, set
 `DATABASE_SSL=false`. Also confirm `DATABASE_URL` points at the right database and that,
-on Railway, you're using the service reference (internal URL) for the app itself.
+on Render, you're using the **Internal Database URL** (not the external one) for the app
+itself. With the Blueprint, `DATABASE_URL` is wired from the Postgres instance
+automatically, so this is already correct.
 
 ---
 

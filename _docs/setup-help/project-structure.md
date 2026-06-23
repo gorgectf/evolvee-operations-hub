@@ -5,6 +5,7 @@
 ```
 operations-hub/
 ├── netlify.toml              # Netlify build config (base=frontend, SPA redirect)
+├── render.yaml               # Render Blueprint: backend web service + Postgres database
 ├── .gitignore
 ├── backend/
 │   ├── package.json          # scripts: start, dev, db:schema, db:seed, db:setup, db:reset
