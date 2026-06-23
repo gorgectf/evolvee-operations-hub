@@ -87,11 +87,11 @@ const env = {
     stockCheckCron: envOr('STOCK_CHECK_CRON', '0 * * * *'),
 
     modes: {
-        shopify: envOr('SHOPIFY_MODE', 'sample'),
-        zohoInventory: envOr('ZOHO_INVENTORY_MODE', 'sample'),
-        zohoBooks: envOr('ZOHO_BOOKS_MODE', 'sample'),
-        zohoCrm: envOr('ZOHO_CRM_MODE', 'sample'),
-        aftership: envOr('AFTERSHIP_MODE', 'sample'),
+        shopify: envOr('SHOPIFY_MODE', 'off'),
+        zohoInventory: envOr('ZOHO_INVENTORY_MODE', 'off'),
+        zohoBooks: envOr('ZOHO_BOOKS_MODE', 'off'),
+        zohoCrm: envOr('ZOHO_CRM_MODE', 'off'),
+        aftership: envOr('AFTERSHIP_MODE', 'off'),
         qrPartner: envOr('QR_PARTNER_MODE', 'placeholder')
     },
 
