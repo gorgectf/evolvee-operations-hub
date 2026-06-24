@@ -41,30 +41,11 @@ router.post('/', asyncRoute(async (req, res) => {
         return res.status(400).json({ error: 'status must be one of: ' + allowed });
     }
 
-    let productIdValue = null;
-    if (productId) {
-        productIdValue = productId;
-    }
-
-    let quantityValue = null;
-    if (quantity) {
-        quantityValue = quantity;
-    }
-
-    let statusValue = null;
-    if (status) {
-        statusValue = status;
-    }
-
-    let expectedDateValue = null;
-    if (expectedDate) {
-        expectedDateValue = expectedDate;
-    }
-
-    let notesValue = null;
-    if (notes) {
-        notesValue = notes;
-    }
+    const productIdValue = productId || null;
+    const quantityValue = quantity || null;
+    const statusValue = status || null;
+    const expectedDateValue = expectedDate || null;
+    const notesValue = notes || null;
 
     const sql =
         'INSERT INTO production_runs ' +
@@ -97,25 +78,10 @@ router.patch('/:id', asyncRoute(async (req, res) => {
         return res.status(400).json({ error: 'status must be one of: ' + allowed });
     }
 
-    let statusValue = null;
-    if (status !== undefined && status !== null) {
-        statusValue = status;
-    }
-
-    let expectedDateValue = null;
-    if (expectedDate !== undefined && expectedDate !== null) {
-        expectedDateValue = expectedDate;
-    }
-
-    let notesValue = null;
-    if (notes !== undefined && notes !== null) {
-        notesValue = notes;
-    }
-
-    let quantityValue = null;
-    if (quantity !== undefined && quantity !== null) {
-        quantityValue = quantity;
-    }
+    const statusValue = status ?? null;
+    const expectedDateValue = expectedDate ?? null;
+    const notesValue = notes ?? null;
+    const quantityValue = quantity ?? null;
 
     const id = Number(req.params.id);
     const sql =

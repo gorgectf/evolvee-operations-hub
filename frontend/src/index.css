@@ -61,7 +61,7 @@ h3 {
 .topbar-inner {
     max-width: 1180px;
     margin: 0 auto;
-    padding: 14px 24px;
+    padding: 12px 16px;
     display: flex;
     align-items: center;
     gap: 24px;
@@ -114,7 +114,7 @@ nav.main a.active {
 .page {
     max-width: 1180px;
     margin: 0 auto;
-    padding: 28px 24px 64px;
+    padding: 20px 16px 48px;
 }
 
 .page h1 {
@@ -132,7 +132,7 @@ nav.main a.active {
 /* Tile grid */
 .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    grid-template-columns: 1fr;
     gap: 18px;
 }
 
@@ -387,16 +387,16 @@ label {
     }
 }
 
-@media (max-width: 640px) {
+@media (min-width: 641px) {
     .grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
     }
 
     .topbar-inner {
-        padding: 12px 16px;
+        padding: 14px 24px;
     }
 
     .page {
-        padding: 20px 16px 48px;
+        padding: 28px 24px 64px;
     }
 }

@@ -1,9 +1,6 @@
 require('dotenv').config();
 
-let nodeEnv = process.env.NODE_ENV;
-if (!nodeEnv) {
-    nodeEnv = 'development';
-}
+const nodeEnv = process.env.NODE_ENV || 'development';
 const isProduction = nodeEnv === 'production';
 
 function required(name, fallback) {
@@ -11,6 +8,7 @@ function required(name, fallback) {
     if (value === undefined || value === null) {
         value = fallback;
     }
+
     if (value === undefined || value === '') {
         throw new Error('Missing required environment variable: ' + name + '. Check your backend/.env file.');
     }

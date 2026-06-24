@@ -41,10 +41,7 @@ router.post('/', asyncRoute(async (req, res) => {
         thresholdValue = n;
     }
 
-    let manufacturerIdValue = null;
-    if (manufacturerId) {
-        manufacturerIdValue = manufacturerId;
-    }
+    const manufacturerIdValue = manufacturerId || null;
 
     const insertProductSql =
         'INSERT INTO products (sku, name, manufacturer_id) ' +
@@ -72,10 +69,7 @@ router.patch('/:id/manufacturer', asyncRoute(async (req, res) => {
         body = {};
     }
 
-    let manufacturerIdValue = null;
-    if (body.manufacturer_id) {
-        manufacturerIdValue = body.manufacturer_id;
-    }
+    const manufacturerIdValue = body.manufacturer_id || null;
 
     const id = Number(req.params.id);
     const sql = 'UPDATE products SET manufacturer_id = $1 WHERE id = $2 RETURNING *';

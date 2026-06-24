@@ -24,6 +24,9 @@ Detailed setup steps live in [`_docs/setup-help/`](_docs/setup-help/) — links 
 9. [Troubleshooting](_docs/setup-help/troubleshooting.md)
 10. [Project structure reference](_docs/setup-help/project-structure.md)
 
+Other:
+[Browser Support](_docs/browser-support.md)
+
 ---
 
 ## 1. What's in this project

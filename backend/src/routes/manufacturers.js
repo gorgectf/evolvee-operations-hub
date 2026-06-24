@@ -94,15 +94,8 @@ router.post('/', asyncRoute(async (req, res) => {
         return res.status(400).json({ error: 'Manufacturer name is required.' });
     }
 
-    let countryValue = null;
-    if (country) {
-        countryValue = country;
-    }
-
-    let notesValue = null;
-    if (notes) {
-        notesValue = notes;
-    }
+    const countryValue = country || null;
+    const notesValue = notes || null;
 
     const result = await query(
         'INSERT INTO manufacturers (name, country, notes) VALUES ($1, $2, $3) RETURNING *',
@@ -117,20 +110,9 @@ router.patch('/:id', asyncRoute(async (req, res) => {
         body = {};
     }
 
-    let nameValue = null;
-    if (body.name !== undefined && body.name !== null) {
-        nameValue = body.name;
-    }
-
-    let countryValue = null;
-    if (body.country !== undefined && body.country !== null) {
-        countryValue = body.country;
-    }
-
-    let notesValue = null;
-    if (body.notes !== undefined && body.notes !== null) {
-        notesValue = body.notes;
-    }
+    const nameValue = body.name ?? null;
+    const countryValue = body.country ?? null;
+    const notesValue = body.notes ?? null;
 
     const id = Number(req.params.id);
     const sql =
@@ -173,25 +155,10 @@ router.post('/:id/contacts', asyncRoute(async (req, res) => {
         return res.status(400).json({ error: 'Contact name is required.' });
     }
 
-    let roleValue = null;
-    if (role) {
-        roleValue = role;
-    }
-
-    let emailValue = null;
-    if (email) {
-        emailValue = email;
-    }
-
-    let phoneValue = null;
-    if (phone) {
-        phoneValue = phone;
-    }
-
-    let notesValue = null;
-    if (notes) {
-        notesValue = notes;
-    }
+    const roleValue = role || null;
+    const emailValue = email || null;
+    const phoneValue = phone || null;
+    const notesValue = notes || null;
 
     const manufacturerId = Number(req.params.id);
     const sql =
@@ -222,15 +189,8 @@ router.post('/:id/communications', asyncRoute(async (req, res) => {
         return res.status(400).json({ error: 'A summary of the communication is required.' });
     }
 
-    let channelValue = 'email';
-    if (channel) {
-        channelValue = channel;
-    }
-
-    let contactIdValue = null;
-    if (contactId) {
-        contactIdValue = contactId;
-    }
+    const channelValue = channel || 'email';
+    const contactIdValue = contactId || null;
 
     const manufacturerId = Number(req.params.id);
     const sql =
@@ -256,15 +216,8 @@ router.post('/:id/reorders', asyncRoute(async (req, res) => {
         return res.status(400).json({ error: 'product_id and quantity_ordered are required.' });
     }
 
-    let orderedAtValue = null;
-    if (orderedAt) {
-        orderedAtValue = orderedAt;
-    }
-
-    let notesValue = null;
-    if (notes) {
-        notesValue = notes;
-    }
+    const orderedAtValue = orderedAt || null;
+    const notesValue = notes || null;
 
     const manufacturerId = Number(req.params.id);
     const sql =

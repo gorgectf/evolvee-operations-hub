@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, NavLink, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, NavLink, Navigate, useNavigate, Outlet } from 'react-router-dom';
 import { getUser, getToken, clearSession } from './api.js';
 import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
@@ -11,17 +11,14 @@ import ProductionRuns from './pages/ProductionRuns.jsx';
 import Users from './pages/Users.jsx';
 import Account from './pages/Account.jsx';
 
-function RequireAuth({ children }) {
-    if (!getToken()) {
-        return <Navigate to="/login" replace />;
-    }
-    return children;
-}
-
-function Shell({ children }) {
+function Shell() {
     const user = getUser();
     const navigate = useNavigate();
     const can = (p) => user?.permissions?.includes(p);
+
+    if (!getToken()) {
+        return <Navigate to="/login" replace />;
+    }
 
     return (
         <>
@@ -78,7 +75,7 @@ function Shell({ children }) {
                 </div>
             </header>
             <main className="page">
-                {children}
+                <Outlet />
             </main>
         </>
     );
@@ -88,86 +85,16 @@ export default function App() {
     return (
         <Routes>
             <Route path="/login" element={<Login />} />
-            <Route
-                path="/"
-                element={
-                    <RequireAuth>
-                        <Shell>
-                            <Dashboard />
-                        </Shell>
-                    </RequireAuth>
-                }
-            />
-            <Route
-                path="/manufacturers"
-                element={
-                    <RequireAuth>
-                        <Shell>
-                            <Manufacturers />
-                        </Shell>
-                    </RequireAuth>
-                }
-            />
-            <Route
-                path="/manufacturers/:id"
-                element={
-                    <RequireAuth>
-                        <Shell>
-                            <ManufacturerDetail />
-                        </Shell>
-                    </RequireAuth>
-                }
-            />
-            <Route
-                path="/products"
-                element={
-                    <RequireAuth>
-                        <Shell>
-                            <Products />
-                        </Shell>
-                    </RequireAuth>
-                }
-            />
-            <Route
-                path="/alerts"
-                element={
-                    <RequireAuth>
-                        <Shell>
-                            <Alerts />
-                        </Shell>
-                    </RequireAuth>
-                }
-            />
-            <Route
-                path="/production"
-                element={
-                    <RequireAuth>
-                        <Shell>
-                            <ProductionRuns />
-                        </Shell>
-                    </RequireAuth>
-                }
-            />
-            <Route
-                path="/users"
-                element={
-                    <RequireAuth>
-                        <Shell>
-                            <Users />
-                        </Shell>
-                    </RequireAuth>
-                }
-            />
-            <Route
-                path="/account"
-                element={
-                    <RequireAuth>
-                        <Shell>
-                            <Account />
-                        </Shell>
-                    </RequireAuth>
-                }
-            />
+            <Route element={<Shell />}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/manufacturers" element={<Manufacturers />} />
+                <Route path="/manufacturers/:id" element={<ManufacturerDetail />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/alerts" element={<Alerts />} />
+                <Route path="/production" element={<ProductionRuns />} />
+                <Route path="/users" element={<Users />} />
+                <Route path="/account" element={<Account />} />
+            </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );
