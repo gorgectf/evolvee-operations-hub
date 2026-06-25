@@ -10,10 +10,7 @@ function getHost(url) {
 }
 
 async function callExternal(url, options = {}, config = {}) {
-    let timeoutMs = config.timeoutMs;
-    if (timeoutMs === undefined) {
-        timeoutMs = 15000;
-    }
+    const timeoutMs = config.timeoutMs ?? 15000;
 
     const controller = new AbortController();
 
@@ -77,20 +74,4 @@ async function recordSync(source, mode, ok, message = null) {
     }
 }
 
-async function withSync(source, mode, offValue, sampleData, live) {
-    if (mode === 'off') {
-        await recordSync(source, 'off', true);
-        return offValue;
-    }
-
-    try {
-        const result = mode === 'sample' ? sampleData : await live();
-        await recordSync(source, mode, true);
-        return result;
-    } catch (err) {
-        await recordSync(source, mode, false, err.message);
-        throw err;
-    }
-}
-
-module.exports = { callExternal, recordSync, withSync };
+module.exports = { callExternal, recordSync };

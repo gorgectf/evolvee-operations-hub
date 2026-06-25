@@ -20,10 +20,7 @@ async function getPartnerData() {
         };
         const data = await callExternal(url, options);
 
-        let partners = [];
-        if (data.partners) {
-            partners = data.partners;
-        }
+        const partners = data.partners || [];
 
         await recordSync('qr_partner', 'live', true);
         return {

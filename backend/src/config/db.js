@@ -1,6 +1,8 @@
 // Single shared PostgreSQL connection pool for the whole backend.
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 const env = require('./env');
+
+types.setTypeParser(1082, (value) => value);
 
 const pool = new Pool({
   connectionString: env.databaseUrl,

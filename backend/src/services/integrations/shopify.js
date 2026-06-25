@@ -39,23 +39,14 @@ async function getSalesOverview() {
 
             const data = await callExternal(url, { headers: headers() });
 
-            let orders = [];
-            if (data.orders) {
-                orders = data.orders;
-            }
+            const orders = data.orders || [];
 
             const bySku = {};
             for (const order of orders) {
-                let lineItems = [];
-                if (order.line_items) {
-                    lineItems = order.line_items;
-                }
+                const lineItems = order.line_items || [];
 
                 for (const li of lineItems) {
-                    let sku = li.sku;
-                    if (!sku) {
-                        sku = li.title;
-                    }
+                    const sku = li.sku || li.title;
 
                     if (!bySku[sku]) {
                         bySku[sku] = {
@@ -66,8 +57,8 @@ async function getSalesOverview() {
                         };
                     }
 
-                    bySku[sku].units_sold_30d = bySku[sku].units_sold_30d + li.quantity;
-                    bySku[sku].revenue_30d = bySku[sku].revenue_30d + (Number(li.price) * li.quantity);
+                    bySku[sku].units_sold_30d += li.quantity;
+                    bySku[sku].revenue_30d += Number(li.price) * li.quantity;
                 }
             }
 
@@ -99,24 +90,11 @@ async function getTopCustomers() {
             const url = base() + '/customers.json?limit=50&order=total_spent+desc';
             const data = await callExternal(url, { headers: headers() });
 
-            let rawCustomers = [];
-            if (data.customers) {
-                rawCustomers = data.customers;
-            }
+            const rawCustomers = data.customers || [];
 
             customers = [];
             for (const c of rawCustomers) {
-                let firstName = '';
-                if (c.first_name) {
-                    firstName = c.first_name;
-                }
-
-                let lastName = '';
-                if (c.last_name) {
-                    lastName = c.last_name;
-                }
-
-                const name = (firstName + ' ' + lastName).trim();
+                const name = ((c.first_name || '') + ' ' + (c.last_name || '')).trim();
 
                 customers.push({
                     id: String(c.id),
@@ -162,18 +140,12 @@ async function getDailyRevenue() {
 
             const data = await callExternal(url, { headers: headers() });
 
-            let orders = [];
-            if (data.orders) {
-                orders = data.orders;
-            }
+            const orders = data.orders || [];
 
             const byDay = {};
             for (const o of orders) {
                 const d = o.created_at.slice(0, 10);
-                if (byDay[d] === undefined) {
-                    byDay[d] = 0;
-                }
-                byDay[d] = byDay[d] + Number(o.total_price);
+                byDay[d] = (byDay[d] || 0) + Number(o.total_price);
             }
 
             const dayKeys = Object.keys(byDay);

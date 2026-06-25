@@ -43,12 +43,8 @@ function authenticate(req, res, next) {
 // Usage: router.get('/route', authenticate, requirePermission('inventory'), handler)
 function requirePermission(moduleKey) {
     function checkPermission(req, res, next) {
-        const userRole = req.user !== null && req.user !== undefined ? req.user.role : null;
-
-        let allowedModules = ROLE_PERMISSIONS[userRole];
-        if (allowedModules === undefined) {
-            allowedModules = [];
-        }
+        const userRole = req.user ? req.user.role : null;
+        const allowedModules = ROLE_PERMISSIONS[userRole] || [];
 
         if (!allowedModules.includes(moduleKey)) {
             return res.status(403).json({ error: `Your role (${userRole}) does not have access to this module.` });

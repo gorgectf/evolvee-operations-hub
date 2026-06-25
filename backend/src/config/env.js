@@ -4,10 +4,7 @@ const nodeEnv = process.env.NODE_ENV || 'development';
 const isProduction = nodeEnv === 'production';
 
 function required(name, fallback) {
-    let value = process.env[name];
-    if (value === undefined || value === null) {
-        value = fallback;
-    }
+    const value = process.env[name] ?? fallback;
 
     if (value === undefined || value === '') {
         throw new Error('Missing required environment variable: ' + name + '. Check your backend/.env file.');
@@ -41,36 +38,18 @@ function parseCorsOrigins() {
         raw = 'http://localhost:5173';
     }
 
-    const origins = raw.split(',');
-    const cleaned = [];
-    for (const origin of origins) {
-        const trimmed = origin.trim().replace(/\/+$/, '');
-        if (trimmed.length > 0) {
-            cleaned.push(trimmed);
-        }
-    }
-    return cleaned;
+    return raw
+        .split(',')
+        .map((origin) => origin.trim().replace(/\/+$/, ''))
+        .filter((origin) => origin.length > 0);
 }
 
 function envOr(name, fallback) {
-    const value = process.env[name];
-    if (value) {
-        return value;
-    }
-    return fallback;
+    return process.env[name] || fallback;
 }
 
-let portString = process.env.PORT;
-if (!portString) {
-    portString = '4000';
-}
-const port = parseInt(portString, 10);
-
-let autoSeedRaw = process.env.AUTO_SEED;
-if (!autoSeedRaw) {
-    autoSeedRaw = 'false';
-}
-const autoSeed = autoSeedRaw.toLowerCase() === 'true';
+const port = parseInt(process.env.PORT || '4000', 10);
+const autoSeed = (process.env.AUTO_SEED || 'false').toLowerCase() === 'true';
 
 const env = {
     port: port,

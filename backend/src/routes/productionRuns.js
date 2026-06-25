@@ -21,10 +21,7 @@ router.get('/', asyncRoute(async (req, res) => {
 }));
 
 router.post('/', asyncRoute(async (req, res) => {
-    let body = req.body;
-    if (!body) {
-        body = {};
-    }
+    const body = req.body || {};
     const manufacturerId = body.manufacturer_id;
     const productId = body.product_id;
     const quantity = body.quantity;
@@ -64,10 +61,7 @@ router.post('/', asyncRoute(async (req, res) => {
 }));
 
 router.patch('/:id', asyncRoute(async (req, res) => {
-    let body = req.body;
-    if (!body) {
-        body = {};
-    }
+    const body = req.body || {};
     const status = body.status;
     const expectedDate = body.expected_date;
     const notes = body.notes;

@@ -22,35 +22,17 @@ async function getTrackings() {
             };
             const data = await callExternal(url, options);
 
-            let rawTrackings = [];
-            if (data.data && data.data.trackings) {
-                rawTrackings = data.data.trackings;
-            }
+            const rawTrackings = (data.data && data.data.trackings) || [];
 
             trackings = [];
             for (const t of rawTrackings) {
-                let orderId = '';
-                if (t.order_id) {
-                    orderId = t.order_id;
-                }
-
-                let customer = '';
-                if (t.customer_name) {
-                    customer = t.customer_name;
-                }
-
-                let lastUpdate = '';
-                if (t.updated_at) {
-                    lastUpdate = t.updated_at.slice(0, 10);
-                }
-
                 trackings.push({
                     tracking_number: t.tracking_number,
-                    order_id: orderId,
+                    order_id: t.order_id || '',
                     courier: t.slug,
                     status: t.tag,
-                    customer: customer,
-                    last_update: lastUpdate
+                    customer: t.customer_name || '',
+                    last_update: t.updated_at ? t.updated_at.slice(0, 10) : ''
                 });
             }
         }

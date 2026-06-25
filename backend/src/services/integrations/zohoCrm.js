@@ -29,28 +29,15 @@ async function getCrmCustomers() {
             };
             const data = await callExternal(url, options);
 
-            let contacts = [];
-            if (data.data) {
-                contacts = data.data;
-            }
+            const contacts = data.data || [];
 
             customers = [];
             for (const c of contacts) {
-                let segment = 'Unknown';
-                if (c.Lead_Source) {
-                    segment = c.Lead_Source;
-                }
-
-                let lifetimeNotes = '';
-                if (c.Description) {
-                    lifetimeNotes = c.Description;
-                }
-
                 customers.push({
                     crm_id: c.id,
                     email: c.Email,
-                    segment: segment,
-                    lifetime_notes: lifetimeNotes
+                    segment: c.Lead_Source || 'Unknown',
+                    lifetime_notes: c.Description || ''
                 });
             }
         }

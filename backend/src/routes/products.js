@@ -19,10 +19,7 @@ router.get('/', asyncRoute(async (req, res) => {
 }));
 
 router.post('/', asyncRoute(async (req, res) => {
-    let body = req.body;
-    if (!body) {
-        body = {};
-    }
+    const body = req.body || {};
     const sku = body.sku;
     const name = body.name;
     const manufacturerId = body.manufacturer_id;
@@ -64,10 +61,7 @@ router.post('/', asyncRoute(async (req, res) => {
 }));
 
 router.patch('/:id/manufacturer', asyncRoute(async (req, res) => {
-    let body = req.body;
-    if (!body) {
-        body = {};
-    }
+    const body = req.body || {};
 
     const manufacturerIdValue = body.manufacturer_id || null;
 
@@ -83,10 +77,7 @@ router.patch('/:id/manufacturer', asyncRoute(async (req, res) => {
 }));
 
 router.put('/:id/threshold', asyncRoute(async (req, res) => {
-    let body = req.body;
-    if (!body) {
-        body = {};
-    }
+    const body = req.body || {};
 
     const threshold = Number(body.threshold);
     if (!Number.isFinite(threshold) || threshold < 0) {

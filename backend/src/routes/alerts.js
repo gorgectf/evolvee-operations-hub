@@ -30,10 +30,7 @@ router.get('/', asyncRoute(async (req, res) => {
 }));
 
 router.patch('/:id', asyncRoute(async (req, res) => {
-    let body = req.body;
-    if (!body) {
-        body = {};
-    }
+    const body = req.body || {};
     const status = body.status;
 
     const allowed = ['open', 'acknowledged', 'resolved'];

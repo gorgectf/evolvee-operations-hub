@@ -82,10 +82,7 @@ router.get('/:id', asyncRoute(async (req, res) => {
 }));
 
 router.post('/', asyncRoute(async (req, res) => {
-    let body = req.body;
-    if (!body) {
-        body = {};
-    }
+    const body = req.body || {};
     const name = body.name;
     const country = body.country;
     const notes = body.notes;
@@ -105,10 +102,7 @@ router.post('/', asyncRoute(async (req, res) => {
 }));
 
 router.patch('/:id', asyncRoute(async (req, res) => {
-    let body = req.body;
-    if (!body) {
-        body = {};
-    }
+    const body = req.body || {};
 
     const nameValue = body.name ?? null;
     const countryValue = body.country ?? null;
@@ -141,10 +135,7 @@ router.delete('/:id', asyncRoute(async (req, res) => {
 }));
 
 router.post('/:id/contacts', asyncRoute(async (req, res) => {
-    let body = req.body;
-    if (!body) {
-        body = {};
-    }
+    const body = req.body || {};
     const name = body.name;
     const role = body.role;
     const email = body.email;
@@ -177,10 +168,7 @@ router.delete('/contacts/:contactId', asyncRoute(async (req, res) => {
 }));
 
 router.post('/:id/communications', asyncRoute(async (req, res) => {
-    let body = req.body;
-    if (!body) {
-        body = {};
-    }
+    const body = req.body || {};
     const channel = body.channel;
     const summary = body.summary;
     const contactId = body.contact_id;
@@ -203,10 +191,7 @@ router.post('/:id/communications', asyncRoute(async (req, res) => {
 }));
 
 router.post('/:id/reorders', asyncRoute(async (req, res) => {
-    let body = req.body;
-    if (!body) {
-        body = {};
-    }
+    const body = req.body || {};
     const productId = body.product_id;
     const quantityOrdered = body.quantity_ordered;
     const orderedAt = body.ordered_at;

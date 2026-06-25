@@ -28,13 +28,7 @@ router.get('/inventory', requirePermission('inventory'), asyncRoute(async (req, 
 
     const items = [];
     for (const i of stock) {
-        let threshold = thresholds[i.sku];
-        if (threshold === undefined || threshold === null) {
-            threshold = i.reorder_level;
-        }
-        if (threshold === undefined || threshold === null) {
-            threshold = 0;
-        }
+        const threshold = thresholds[i.sku] ?? i.reorder_level ?? 0;
 
         const item = Object.assign({}, i);
         item.threshold = threshold;
@@ -42,12 +36,7 @@ router.get('/inventory', requirePermission('inventory'), asyncRoute(async (req, 
         items.push(item);
     }
 
-    let lowCount = 0;
-    for (const item of items) {
-        if (item.low_stock) {
-            lowCount = lowCount + 1;
-        }
-    }
+    const lowCount = items.filter((item) => item.low_stock).length;
 
     res.json({ items: items, low_count: lowCount });
 }));
@@ -122,10 +111,7 @@ router.get('/revenue', requirePermission('revenue'), asyncRoute(async (req, res)
         monday.setUTCDate(dt.getUTCDate() - offsetToMonday);
 
         const key = monday.toISOString().slice(0, 10);
-        if (weekly[key] === undefined) {
-            weekly[key] = 0;
-        }
-        weekly[key] = weekly[key] + d.revenue;
+        weekly[key] = (weekly[key] || 0) + d.revenue;
     }
 
     const weekKeys = Object.keys(weekly);
@@ -151,18 +137,10 @@ router.get('/shipping', requirePermission('shipping'), asyncRoute(async (req, re
 
     const byStatus = {};
     for (const t of trackings) {
-        if (byStatus[t.status] === undefined) {
-            byStatus[t.status] = 0;
-        }
-        byStatus[t.status] = byStatus[t.status] + 1;
+        byStatus[t.status] = (byStatus[t.status] || 0) + 1;
     }
 
-    const exceptions = [];
-    for (const t of trackings) {
-        if (t.status === 'Exception') {
-            exceptions.push(t);
-        }
-    }
+    const exceptions = trackings.filter((t) => t.status === 'Exception');
 
     res.json({
         trackings: trackings,

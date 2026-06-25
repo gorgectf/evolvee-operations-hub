@@ -9,10 +9,7 @@ const { asyncRoute } = require('../middleware/errorHandler');
 const router = express.Router();
 
 router.post('/login', asyncRoute(async (req, res) => {
-    let body = req.body;
-    if (!body) {
-        body = {};
-    }
+    const body = req.body || {};
     const email = body.email;
     const password = body.password;
 
@@ -45,10 +42,7 @@ router.post('/login', asyncRoute(async (req, res) => {
     const tokenOptions = { expiresIn: env.jwtExpiresIn };
     const token = jwt.sign(tokenPayload, env.jwtSecret, tokenOptions);
 
-    let permissions = ROLE_PERMISSIONS[user.role];
-    if (!permissions) {
-        permissions = [];
-    }
+    const permissions = ROLE_PERMISSIONS[user.role] || [];
 
     res.json({
         token: token,
@@ -63,10 +57,7 @@ router.post('/login', asyncRoute(async (req, res) => {
 }));
 
 router.get('/me', authenticate, (req, res) => {
-    let permissions = ROLE_PERMISSIONS[req.user.role];
-    if (!permissions) {
-        permissions = [];
-    }
+    const permissions = ROLE_PERMISSIONS[req.user.role] || [];
 
     const user = {
         id: req.user.id,

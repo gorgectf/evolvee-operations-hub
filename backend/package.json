@@ -1,11 +1,12 @@
 {
   "name": "operations-hub-backend",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "Evolvee Radiance Operations Hub Backend",
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {
     "start": "node src/server.js",
+    "test": "node test-integrations.cjs",
     "dev": "node --watch src/server.js",
     "db:schema": "node db/applySchema.js",
     "db:seed": "node db/seed.js",

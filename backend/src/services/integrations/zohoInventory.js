@@ -28,24 +28,12 @@ async function getStockLevels() {
             };
             const data = await callExternal(url, options);
 
-            let rawItems = [];
-            if (data.items) {
-                rawItems = data.items;
-            }
+            const rawItems = data.items || [];
 
             items = [];
             for (const i of rawItems) {
-                let stockValue = 0;
-                if (i.stock_on_hand !== undefined && i.stock_on_hand !== null) {
-                    stockValue = i.stock_on_hand;
-                } else if (i.available_stock !== undefined && i.available_stock !== null) {
-                    stockValue = i.available_stock;
-                }
-
-                let reorderValue = 0;
-                if (i.reorder_level !== undefined && i.reorder_level !== null) {
-                    reorderValue = i.reorder_level;
-                }
+                const stockValue = i.stock_on_hand ?? i.available_stock ?? 0;
+                const reorderValue = i.reorder_level ?? 0;
 
                 items.push({
                     sku: i.sku,

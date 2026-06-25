@@ -26,10 +26,7 @@ async function getZohoAccessToken() {
         throw new Error('Zoho token refresh failed — check ZOHO_* values in .env');
     }
 
-    let expiresInSeconds = 3600;
-    if (data.expires_in) {
-        expiresInSeconds = data.expires_in;
-    }
+    const expiresInSeconds = data.expires_in || 3600;
 
     cached = {
         token: data.access_token,

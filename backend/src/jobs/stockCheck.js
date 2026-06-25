@@ -5,7 +5,7 @@ const zohoInventory = require('../services/integrations/zohoInventory');
 
 async function alertIfLowStock(productId, currentStock, threshold) {
     const existingAlert = await query(
-        `SELECT id FROM reorder_alerts WHERE product_id = $1 AND status = 'open'`,
+        `SELECT id FROM reorder_alerts WHERE product_id = $1 AND status IN ('open', 'acknowledged')`,
         [productId]
     );
 
