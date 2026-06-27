@@ -29,6 +29,16 @@ export default function Alerts() {
         }
     }
 
+    async function remove(id) {
+        if (!window.confirm('Delete this alert?')) return;
+        try {
+            await api(`/alerts/${id}`, { method: 'DELETE' });
+            load();
+        } catch (e) {
+            setError(e.message);
+        }
+    }
+
     async function checkNow() {
         setChecking(true);
         setNotice('');
@@ -131,6 +141,12 @@ export default function Alerts() {
                                                 Resolve
                                             </button>
                                         )}
+                                        <button
+                                            className="link"
+                                            onClick={() => remove(alert.id)}
+                                        >
+                                            Delete
+                                        </button>
                                     </td>
                                 </tr>
                             ))}

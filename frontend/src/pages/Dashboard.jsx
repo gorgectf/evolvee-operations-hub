@@ -132,28 +132,30 @@ export default function Dashboard() {
                                                 <div className="l">SKUs / item IDs need reordering</div>
                                             </div>
                                         </div>
-                                        <table>
-                                            <thead>
-                                                <tr>
-                                                    <th>SKU / Item ID</th>
-                                                    <th>Product</th>
-                                                    <th className="num">Stock</th>
-                                                    <th className="num">Threshold</th>
-                                                    <th>Manufacturer</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {data.open_alerts.slice(0, 5).map((alert) => (
-                                                    <tr key={alert.id}>
-                                                        <td>{alert.sku}</td>
-                                                        <td>{alert.name}</td>
-                                                        <td className="num">{alert.stock_level}</td>
-                                                        <td className="num">{alert.threshold}</td>
-                                                        <td>{alert.manufacturer || '—'}</td>
+                                        <div className="table-scroll">
+                                            <table>
+                                                <thead>
+                                                    <tr>
+                                                        <th>SKU / Item ID</th>
+                                                        <th>Product</th>
+                                                        <th className="num">Stock</th>
+                                                        <th className="num">Threshold</th>
+                                                        <th>Manufacturer</th>
                                                     </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                                                </thead>
+                                                <tbody>
+                                                    {data.open_alerts.slice(0, 5).map((alert) => (
+                                                        <tr key={alert.id}>
+                                                            <td>{alert.sku}</td>
+                                                            <td>{alert.name}</td>
+                                                            <td className="num">{alert.stock_level}</td>
+                                                            <td className="num">{alert.threshold}</td>
+                                                            <td>{alert.manufacturer || '—'}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                         <p style={{ marginBottom: 0 }}>
                                             <Link to="/alerts">Manage alerts →</Link>
                                         </p>

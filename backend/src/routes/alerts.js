@@ -54,6 +54,15 @@ router.patch('/:id', asyncRoute(async (req, res) => {
     res.json({ alert: alert });
 }));
 
+router.delete('/:id', asyncRoute(async (req, res) => {
+    const id = Number(req.params.id);
+    const result = await query('DELETE FROM reorder_alerts WHERE id = $1 RETURNING id', [id]);
+    if (!result.rows[0]) {
+        return res.status(404).json({ error: 'Alert not found.' });
+    }
+    res.json({ deleted: id });
+}));
+
 router.post('/check-now', asyncRoute(async (req, res) => {
     const result = await runStockCheck();
     res.json(result);
