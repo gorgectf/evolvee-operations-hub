@@ -2,7 +2,7 @@
 
 ← [Back to README](../../README.md)
 
-You need three things: **Node.js**, **PostgreSQL**, and (for deployment later) **Git**.
+You need two things: **Node.js** and **PostgreSQL**.
 
 ---
 
@@ -43,14 +43,6 @@ psql --version
 
 If `psql` is "not recognized", the PostgreSQL `bin` folder isn't on your PATH — see
 [Troubleshooting](troubleshooting.md#node-or-psql-is-not-recognized).
-
----
-
-## 2.3 Git (needed for deployment, optional for local dev)
-
-1. Download from https://git-scm.com/download/win
-2. Run the installer, accept all defaults.
-3. Verify: `git --version`
 
 ---
 

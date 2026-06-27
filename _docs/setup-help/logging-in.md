@@ -6,13 +6,6 @@ The demo seed (`npm run db:seed`) creates one account per role. **All demo passw
 `radiance123`** — change them before any real use (Admin → Team Members page, or re-seed
 with new values in `backend/db/seed.js`).
 
-> **Live / online deployments** don't get these demo accounts. They seed a **single admin
-> user** instead — run `npm run db:seed:admin`, or set `AUTO_SEED=admin` so the server does
-> it on first boot. The admin email comes from `ADMIN_EMAIL`; the password comes from
-> `ADMIN_PASSWORD`, or is auto-generated and printed once if you leave that blank. See
-> [Step 8 — Deploying](deployment.md). Add the rest of your team from the Team Members page
-> once you're in.
-
 | Email | Role | Sees |
 |---|---|---|
 | `admin@yourdomain.com` | Admin | Everything, incl. user management |

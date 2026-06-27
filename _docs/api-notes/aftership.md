@@ -7,26 +7,6 @@ into the backend (inbound). The host application also makes outbound calls to
 create/update trackings and read courier data. Keep this directionality in mind: most
 shipping data arrives *unsolicited* at a webhook endpoint, not via polling.
 
----
-
-## Why this stays on AfterShip (not folded into Shopify)
-
-Sales, customers, stock, and revenue were consolidated onto Shopify. Shipping was
-**deliberately left on AfterShip** because the fields that matter can't move without
-losing information:
-
-| Field used by the shipping view | Shopify equivalent | Verdict |
-|---|---|---|
-| `status` (incl. `Exception`) | `fulfillment.shipment_status` | Lossy - no `Exception` value, coarser, often unset unless a carrier app pushes updates |
-| `last_update` | `fulfillment.updated_at` | Different fact - record-change time, not the carrier's last scan |
-| `courier` (slug) | `fulfillment.tracking_company` | Lossy - free-text display name, not a stable slug |
-| `tracking_number`, `order_id` | `fulfillment.tracking_number`, `order.name` | Identical, but already correct via AfterShip - sourcing from Shopify needs a join for zero gain |
-
-Net: AfterShip's live, carrier-normalised tracking status (especially exception
-detection) has no zero-loss Shopify substitute, so the shipping module keeps using it.
-
----
-
 ## Base URL
 
 ```
@@ -130,7 +110,6 @@ Check the current per-endpoint figures in the reference before sizing any bulk j
 ## Credentials checklist (sample → live)
 
 - [ ] `AFTERSHIP_API_KEY` - API key from the admin portal
-- [ ] Backend webhook endpoint deployed and publicly reachable on port 80/443/8080
 - [ ] Webhook URL registered in the admin portal, returning 2xx on test
 - [ ] `AFTERSHIP_WEBHOOK_SECRET` - for verifying `aftership-hmac-sha256`
 - [ ] Webhook version selected and your parser handles that payload version

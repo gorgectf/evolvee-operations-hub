@@ -20,13 +20,11 @@ Detailed setup steps live in [`_docs/setup-help/`](_docs/setup-help/) - links be
 5. [Set up and run the frontend](_docs/setup-help/frontend-setup.md)
 6. [Logging in](_docs/setup-help/logging-in.md)
 7. [Sample data vs live API mode](_docs/setup-help/sample-vs-live.md)
-8. [Deploying (Netlify + Railway)](_docs/setup-help/deployment.md)
-9. [Troubleshooting](_docs/setup-help/troubleshooting.md)
-10. [Project structure reference](_docs/setup-help/project-structure.md)
+8. [Troubleshooting](_docs/setup-help/troubleshooting.md)
+9. [Project structure reference](_docs/setup-help/project-structure.md)
 
 Other:
-11. [Browser Support](_docs/browser-support.md).
-12. [Going from 'Sample' to 'Live' on a deployed site](_docs/going-live.md)
+10. [Browser Support](_docs/browser-support.md).
 
 ---
 

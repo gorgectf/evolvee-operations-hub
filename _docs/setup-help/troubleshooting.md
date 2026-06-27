@@ -1,4 +1,4 @@
-# Step 9 — Troubleshooting
+# Step 8 — Troubleshooting
 
 ← [Back to README](../../README.md)
 
@@ -73,12 +73,8 @@ Or use the Services app: Win+R → `services.msc` → find "postgresql-x64-16" �
 
 ## CORS error in the browser console
 
-Locally this shouldn't happen (the Vite proxy avoids CORS entirely). In production it
-means Render's `CORS_ORIGIN` doesn't match your Netlify URL — check the protocol
-(`https://`) and the subdomain. A trailing slash no longer matters (it's normalised
-away), and you can list multiple origins comma-separated. After changing `CORS_ORIGIN` on
-the Render service's **Environment** page, the service redeploys before the new value
-takes effect.
+Locally this shouldn't happen — the Vite proxy avoids CORS entirely. If you see it, the
+frontend and backend are on different origins without the proxy in between.
 
 ---
 
@@ -87,38 +83,6 @@ takes effect.
 JWT tokens expire after `JWT_EXPIRES_IN` (default 8 hours). Just log in again. If it
 happens immediately after login, the backend's `JWT_SECRET` changed between issuing and
 verifying the token (e.g. you restarted with a different `.env`) — log in again.
-
----
-
-## Backend won't start in production: "JWT_SECRET is too weak"
-
-When `NODE_ENV=production`, the backend refuses to boot with a missing, placeholder, or
-short (`< 32` chars) `JWT_SECRET`, because a weak secret lets anyone forge a login
-token. Set a long random value (see step 8.2) and redeploy. On Render, the Blueprint's
-`generateValue: true` already provides a strong secret automatically. Locally (no
-`NODE_ENV=production`) this check is relaxed.
-
----
-
-## Render deploy hangs on "No open ports detected"
-
-Render assigns the port via its own `PORT` variable and routes traffic to it, so your
-service must listen on that port. The backend already reads `process.env.PORT`, so the
-fix is usually to **remove any `PORT` variable you added** (e.g. `4000`) and redeploy — it
-then uses the port Render provides. If you ever customise the server startup, make sure it
-binds to `0.0.0.0`, not `127.0.0.1`.
-
----
-
-## Can't connect to the database after deploying
-
-Managed Postgres requires SSL. The backend turns SSL on automatically for any non-local
-host, so this normally just works. If you see an SSL-related connection error, set
-`DATABASE_SSL=true` explicitly; if you're on a host that must *not* use SSL, set
-`DATABASE_SSL=false`. Also confirm `DATABASE_URL` points at the right database and that,
-on Render, you're using the **Internal Database URL** (not the external one) for the app
-itself. With the Blueprint, `DATABASE_URL` is wired from the Postgres instance
-automatically, so this is already correct.
 
 ---
 

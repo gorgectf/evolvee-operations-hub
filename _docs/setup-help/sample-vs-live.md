@@ -45,4 +45,4 @@ showing stale data — check the **sync status** indicator and the backend conso
 
 ---
 
-Next: [Step 8 — Deploying](deployment.md)
+Next: [Step 8 — Troubleshooting](troubleshooting.md)
