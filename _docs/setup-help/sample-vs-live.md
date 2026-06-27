@@ -7,12 +7,12 @@ Every external source has its own mode switch in `backend/.env`, so you can go l
 
 ```
 SHOPIFY_MODE=sample          # sample | live
-ZOHO_INVENTORY_MODE=sample
-ZOHO_BOOKS_MODE=sample
 ZOHO_CRM_MODE=sample
 AFTERSHIP_MODE=sample
 QR_PARTNER_MODE=placeholder  # placeholder until API access confirmed
 ```
+
+Shopify drives sales, top customers, stock levels, and revenue (daily/weekly/monthly).
 
 In **sample** mode the backend serves realistic bundled JSON (in
 `backend/src/services/sampleData/`) so the whole UI works without any credentials.

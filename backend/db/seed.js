@@ -52,7 +52,10 @@ async function seed() {
         );
     }
 
-    // ── Products (SKUs match the bundled Zoho Inventory sample data) ──
+    // ── Products (SKUs match the bundled Shopify sample data) ──
+    // For the LIVE store (no SKUs), set products.shopify_inventory_item_id per
+    // product so stock levels and reorder alerts match. The demo rows below leave
+    // it NULL because sample mode joins by SKU.
     const productRows = [
         ['ER-SER-001', 'Radiance Renewal Serum 30ml', luminaId],
         ['ER-OIL-002', 'Golden Glow Face Oil 25ml',   luminaId],

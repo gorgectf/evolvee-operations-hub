@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const { query } = require('../config/db');
 const env = require('../config/env');
-const zohoInventory = require('../services/integrations/zohoInventory');
+const shopify = require('../services/integrations/shopify');
 
 async function alertIfLowStock(productId, currentStock, threshold) {
     const existingAlert = await query(
@@ -22,15 +22,20 @@ async function alertIfLowStock(productId, currentStock, threshold) {
 }
 
 async function runStockCheck() {
-    const stockLevels = await zohoInventory.getStockLevels();
+    const stockLevels = await shopify.getStockLevels();
 
-    const stockBySku = {};
+    const stockByKey = {};
     for (const stockItem of stockLevels) {
-        stockBySku[stockItem.sku] = stockItem.stock_on_hand;
+        if (stockItem.inventory_item_id != null) {
+            stockByKey[stockItem.inventory_item_id] = stockItem.stock_on_hand;
+        }
+        if (stockItem.sku) {
+            stockByKey[stockItem.sku] = stockItem.stock_on_hand;
+        }
     }
 
     const thresholdsResult = await query(
-        `SELECT p.id AS product_id, p.sku, rt.threshold
+        `SELECT p.id AS product_id, p.sku, p.shopify_inventory_item_id, rt.threshold
          FROM reorder_thresholds rt JOIN products p ON p.id = rt.product_id`
     );
 
@@ -38,7 +43,12 @@ async function runStockCheck() {
     let alertsCreated = 0;
 
     for (const row of thresholds) {
-        const currentStock = stockBySku[row.sku];
+        let currentStock = row.shopify_inventory_item_id != null
+            ? stockByKey[row.shopify_inventory_item_id]
+            : undefined;
+        if (currentStock === undefined) {
+            currentStock = stockByKey[row.sku];
+        }
 
         if (currentStock === undefined) {
             continue;

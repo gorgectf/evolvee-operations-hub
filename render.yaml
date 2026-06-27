@@ -74,10 +74,6 @@ services:
           # then switch one source at a time.
           - key: SHOPIFY_MODE
             value: sample
-          - key: ZOHO_INVENTORY_MODE
-            value: sample
-          - key: ZOHO_BOOKS_MODE
-            value: sample
           - key: ZOHO_CRM_MODE
             value: sample
           - key: AFTERSHIP_MODE

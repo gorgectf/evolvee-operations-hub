@@ -1,5 +1,3 @@
-// Zoho CRM — refreshes an access token, then reads one contact.
-// (CRM returns an empty 204 when there are no contacts; that still proves access.)
 const { http, mode, need, zohoToken, run } = require('./_runner.cjs');
 
 async function test() {

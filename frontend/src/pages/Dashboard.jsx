@@ -129,13 +129,13 @@ export default function Dashboard() {
                                                 <div className="v" style={{ color: 'var(--bad)' }}>
                                                     {data.open_count}
                                                 </div>
-                                                <div className="l">SKUs need reordering</div>
+                                                <div className="l">SKUs / item IDs need reordering</div>
                                             </div>
                                         </div>
                                         <table>
                                             <thead>
                                                 <tr>
-                                                    <th>SKU</th>
+                                                    <th>SKU / Item ID</th>
                                                     <th>Product</th>
                                                     <th className="num">Stock</th>
                                                     <th className="num">Threshold</th>
@@ -165,29 +165,31 @@ export default function Dashboard() {
                 )}
 
                 {canAccess('inventory') && (
-                    <Tile title="Stock levels" source="Zoho Inventory">
+                    <Tile title="Stock levels" source="Shopify">
                         <Body state={inventory}>
                             {(data) => (
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>SKU</th>
-                                            <th>Product</th>
-                                            <th className="num">On hand</th>
-                                            <th>Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {data.items.map((item) => (
-                                            <tr key={item.sku}>
-                                                <td>{item.sku}</td>
-                                                <td>{item.name}</td>
-                                                <td className="num">{item.stock_on_hand}</td>
-                                                <td>{stockPill(item.low_stock)}</td>
+                                <div className="table-scroll">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>SKU / Item ID</th>
+                                                <th>Product</th>
+                                                <th className="num">On hand</th>
+                                                <th>Status</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {data.items.map((item) => (
+                                                <tr key={item.sku}>
+                                                    <td>{item.sku}</td>
+                                                    <td>{item.name}</td>
+                                                    <td className="num">{item.stock_on_hand}</td>
+                                                    <td>{stockPill(item.low_stock)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             )}
                         </Body>
                     </Tile>
@@ -319,10 +321,6 @@ export default function Dashboard() {
                                     return (
                                         <p className="empty">
                                             {data.message}
-                                            <br />
-                                            <span style={{ fontSize: 12.5 }}>
-                                                This module switches on automatically once API access is confirmed.
-                                            </span>
                                         </p>
                                     );
                                 }
@@ -352,7 +350,7 @@ export default function Dashboard() {
                 )}
 
                 {canAccess('revenue') && (
-                    <Tile title="Revenue" source="Shopify + Zoho Books" wide>
+                    <Tile title="Revenue" source="Shopify" wide>
                         <Body state={revenue}>
                             {(data) => (
                                 <div className="row">

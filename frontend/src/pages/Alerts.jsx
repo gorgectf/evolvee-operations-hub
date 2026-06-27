@@ -38,7 +38,7 @@ export default function Alerts() {
             const result = await api('/alerts/check-now', { method: 'POST' });
             const plural = result.alerts_created === 1 ? '' : 's';
             setNotice(
-                `Checked ${result.checked} SKUs against Zoho Inventory — ` +
+                `Checked ${result.checked} SKUs / item IDs against Shopify — ` +
                 `${result.alerts_created} new alert${plural} created.`
             );
             load();
@@ -63,7 +63,7 @@ export default function Alerts() {
         <>
             <h1>Reorder alerts</h1>
             <p className="sub">
-                Raised automatically when stock in Zoho Inventory falls to or below a SKU's reorder threshold. Checks run hourly.
+                Raised automatically when stock in Shopify falls to or below a SKU's or item ID's reorder threshold. Checks run hourly.
             </p>
 
             {error && <div className="banner error">{error}</div>}
@@ -80,7 +80,7 @@ export default function Alerts() {
             {alerts !== null && alerts.length === 0 && (
                 <div className="tile">
                     <p className="empty">
-                        No alerts. Every SKU is above its reorder threshold.
+                        No alerts. Every SKU / item ID is above its reorder threshold.
                     </p>
                 </div>
             )}
@@ -91,7 +91,7 @@ export default function Alerts() {
                         <thead>
                             <tr>
                                 <th>Raised</th>
-                                <th>SKU</th>
+                                <th>SKU / Item ID</th>
                                 <th>Product</th>
                                 <th className="num">Stock</th>
                                 <th className="num">Threshold</th>

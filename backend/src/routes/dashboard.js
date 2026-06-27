@@ -2,9 +2,7 @@ const express = require('express');
 const { query } = require('../config/db');
 const { authenticate, requirePermission } = require('../middleware/auth');
 const { asyncRoute } = require('../middleware/errorHandler');
-const zohoInventory = require('../services/integrations/zohoInventory');
 const shopify = require('../services/integrations/shopify');
-const zohoBooks = require('../services/integrations/zohoBooks');
 const zohoCrm = require('../services/integrations/zohoCrm');
 const aftership = require('../services/integrations/aftership');
 const qrPartner = require('../services/integrations/qrPartner');
@@ -13,22 +11,31 @@ const router = express.Router();
 router.use(authenticate);
 
 router.get('/inventory', requirePermission('inventory'), asyncRoute(async (req, res) => {
-    const stock = await zohoInventory.getStockLevels();
+    const stock = await shopify.getStockLevels();
 
     const thresholdResult = await query(
-        'SELECT p.sku, rt.threshold ' +
+        'SELECT p.sku, p.shopify_inventory_item_id, rt.threshold ' +
         'FROM reorder_thresholds rt ' +
         'JOIN products p ON p.id = rt.product_id'
     );
 
     const thresholds = {};
     for (const row of thresholdResult.rows) {
-        thresholds[row.sku] = row.threshold;
+        if (row.shopify_inventory_item_id) {
+            thresholds[row.shopify_inventory_item_id] = row.threshold;
+        }
+        if (row.sku) {
+            thresholds[row.sku] = row.threshold;
+        }
     }
 
     const items = [];
     for (const i of stock) {
-        const threshold = thresholds[i.sku] ?? i.reorder_level ?? 0;
+        const threshold =
+            (i.inventory_item_id != null ? thresholds[i.inventory_item_id] : undefined) ??
+            thresholds[i.sku] ??
+            i.reorder_level ??
+            0;
 
         const item = Object.assign({}, i);
         item.threshold = threshold;
@@ -100,8 +107,10 @@ router.get('/customers', requirePermission('customers'), asyncRoute(async (req, 
 }));
 
 router.get('/revenue', requirePermission('revenue'), asyncRoute(async (req, res) => {
-    const daily = await shopify.getDailyRevenue();
-    const monthly = await zohoBooks.getMonthlyRevenue();
+    const [daily, monthly] = await Promise.all([
+        shopify.getDailyRevenue(),
+        shopify.getMonthlyRevenue()
+    ]);
 
     const weekly = {};
     for (const d of daily) {

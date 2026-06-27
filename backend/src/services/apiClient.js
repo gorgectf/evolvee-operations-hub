@@ -39,7 +39,13 @@ async function callExternal(url, options = {}, config = {}) {
             throw new Error(`HTTP ${response.status} from ${host}: ${preview}`);
         }
 
-        return await response.json();
+        const json = await response.json();
+
+        if (config.includeHeaders) {
+            return { data: json, headers: response.headers };
+        }
+
+        return json;
     } catch (error) {
         if (error.name === 'AbortError') {
             const host = getHost(url);

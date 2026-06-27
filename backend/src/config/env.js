@@ -50,11 +50,6 @@ function envOr(name, fallback) {
 
 const port = parseInt(process.env.PORT || '4000', 10);
 
-// AUTO_SEED selects what (if anything) is seeded on startup against an empty DB:
-//   "demo"  - full demo dataset (db/seed.js): 5 role users, manufacturers, products
-//   "admin" - a single admin user only (db/seedAdmin.js): for live/online deploys
-//   "false" - nothing (default; seed manually with npm run db:seed[:admin])
-// "true" is kept as an alias for "demo" for backward compatibility.
 const seedModeRaw = (process.env.AUTO_SEED || 'false').toLowerCase();
 const seedMode = seedModeRaw === 'true' ? 'demo' : seedModeRaw;
 const autoSeed = seedMode === 'demo' || seedMode === 'admin';
@@ -74,8 +69,6 @@ const env = {
 
     modes: {
         shopify: envOr('SHOPIFY_MODE', 'off'),
-        zohoInventory: envOr('ZOHO_INVENTORY_MODE', 'off'),
-        zohoBooks: envOr('ZOHO_BOOKS_MODE', 'off'),
         zohoCrm: envOr('ZOHO_CRM_MODE', 'off'),
         aftership: envOr('AFTERSHIP_MODE', 'off'),
         qrPartner: envOr('QR_PARTNER_MODE', 'placeholder')
@@ -91,7 +84,6 @@ const env = {
         clientId: envOr('ZOHO_CLIENT_ID', ''),
         clientSecret: envOr('ZOHO_CLIENT_SECRET', ''),
         refreshToken: envOr('ZOHO_REFRESH_TOKEN', ''),
-        orgId: envOr('ZOHO_ORG_ID', ''),
         accountsBase: envOr('ZOHO_ACCOUNTS_BASE', 'https://accounts.zoho.com'),
         apiBase: envOr('ZOHO_API_BASE', 'https://www.zohoapis.com')
     },

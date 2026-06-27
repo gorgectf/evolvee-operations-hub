@@ -1,22 +1,6 @@
-// Seeds ONLY a single admin user - for live/online deployments where the demo
-// accounts and sample manufacturers/products from db/seed.js are not wanted.
-// Idempotent: skips if any users already exist (same guard as the demo seed).
-//
-// Run with:  npm run db:seed:admin   (from the backend folder)
-// Or at boot automatically by setting AUTO_SEED=admin (see .env.example).
-//
-// Credentials come from the environment:
-//   ADMIN_EMAIL     first admin login        (default admin@evolveeradiance.com)
-//   ADMIN_NAME      display name             (default "Administrator")
-//   ADMIN_PASSWORD  optional - if unset, a strong random password is generated
-//                   and printed ONCE to the console/deploy logs. Never ships a
-//                   known default into a live database.
-
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 
-// Pure credential resolution, kept free of the DB import so it can be checked
-// standalone (node db/seedAdmin.js --check).
 function adminCreds(envVars) {
     const env = envVars || process.env;
     const provided = Boolean(env.ADMIN_PASSWORD);

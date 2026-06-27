@@ -35,9 +35,15 @@ CREATE TABLE IF NOT EXISTS products (
     id              SERIAL PRIMARY KEY,
     sku             TEXT UNIQUE NOT NULL,
     name            TEXT NOT NULL,
+    -- Shopify inventory_item_id. The live store has no SKUs, so stock levels are
+    -- matched on this; SKU is still used for the bundled sample data.
+    shopify_inventory_item_id TEXT,
     manufacturer_id INTEGER REFERENCES manufacturers(id) ON DELETE SET NULL,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- For databases created before the column existed:
+ALTER TABLE products ADD COLUMN IF NOT EXISTS shopify_inventory_item_id TEXT;
 
 CREATE TABLE IF NOT EXISTS reorder_thresholds (
     id         SERIAL PRIMARY KEY,
@@ -99,6 +105,7 @@ CREATE TABLE IF NOT EXISTS sync_status (
     message      TEXT
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_products_shopify_iid ON products(shopify_inventory_item_id);
 CREATE INDEX IF NOT EXISTS idx_alerts_status   ON reorder_alerts(status);
 CREATE INDEX IF NOT EXISTS idx_comms_mfr       ON communications(manufacturer_id);
 CREATE INDEX IF NOT EXISTS idx_runs_mfr        ON production_runs(manufacturer_id);

@@ -14,7 +14,7 @@ data to Klaviyo; nothing is pulled back in initial scope. Marketing performance 
 https://a.klaviyo.com/api/
 ```
 
-Klaviyo versions its API with **revisions** — ISO 8601 dates passed in a **`revision`**
+Klaviyo versions its API with **revisions** - ISO 8601 dates passed in a **`revision`**
 request header (e.g. `revision: 2024-10-15`), not in the URL.
 
 - **Pin to a specific stable revision.** Check the revision dropdown in the Klaviyo
@@ -51,12 +51,12 @@ accept: application/json
 ```
 
 > **Never use a private key with client-side `/client` endpoints.** The private key reads
-> and writes sensitive account data — treat it like a password, keep it in your
+> and writes sensitive account data - treat it like a password, keep it in your
 > environment configuration (`KLAVIYO_PRIVATE_KEY`), and scope it to only the permissions
 > this integration needs. A new private key can be created/deactivated at any time if
 > exposed.
 
-Klaviyo uses the **JSON:API** spec — request/response bodies wrap data in a `data` object
+Klaviyo uses the **JSON:API** spec - request/response bodies wrap data in a `data` object
 with `type` and `attributes`; `PATCH` requests must include the resource `type` and `id`.
 
 ---
@@ -71,7 +71,7 @@ with `type` and `attributes`; `PATCH` requests must include the resource `type` 
 | Bulk create events | `POST /api/event-bulk-create-jobs/` | Up to **1,000 events** per request. |
 
 At a minimum, an event needs a **profile identifier** (`id`, `email`, or `phone_number`)
-and a **metric name**. A successful call returns **`202 Accepted`** — this means the event
+and a **metric name**. A successful call returns **`202 Accepted`** - this means the event
 was validated and queued, **not** that processing finished.
 
 > **Idempotency / de-duplication:** events de-duplicate on the tuple
@@ -88,7 +88,7 @@ was validated and queued, **not** that processing finished.
 
 > A profile needs at least one identifier (`email`, `phone_number`, `external_id`, or
 > `anonymous_id`). Updating an existing profile's identifiers must be done **server-side**
-> with the private key — client-side attempts return `202` but won't apply the change.
+> with the private key - client-side attempts return `202` but won't apply the change.
 
 ---
 
@@ -97,8 +97,8 @@ was validated and queued, **not** that processing finished.
 All endpoints are rate limited **per account**, using a **fixed-window** algorithm with
 two windows that apply simultaneously:
 
-- **Burst** — a 1-second window
-- **Steady** — a 1-minute window
+- **Burst** - a 1-second window
+- **Steady** - a 1-minute window
 
 Each endpoint is assigned a tier (XS / S / M / L / XL); the burst and steady figures for
 that tier are listed on the endpoint's reference page. Illustrative tiers:
@@ -111,14 +111,14 @@ that tier are listed on the endpoint's reference page. Illustrative tiers:
 | L | 75/s | 700/m |
 | XL | 350/s | 3,500/m |
 
-> Always read the **specific endpoint's** documented limit rather than assuming a tier —
+> Always read the **specific endpoint's** documented limit rather than assuming a tier -
 > some parameters (e.g. extra `include`/`additional-fields`) change the effective limit.
 
 **Handling:**
 
 - Hitting either window returns **`429`**; read the **`Retry-After`** header and wait.
 - Use **exponential back-off** if you hit limits consistently.
-- Non-429 responses include `RateLimit`-style headers showing remaining quota — monitor
+- Non-429 responses include `RateLimit`-style headers showing remaining quota - monitor
   these to throttle proactively.
 - Maximum payload size is **5 MB** (decompressed); a single string field cannot exceed
   **100 KB**.
@@ -129,8 +129,8 @@ For high volume, prefer the **bulk** endpoints over many single calls.
 
 ## Credentials checklist (sample → live)
 
-- [ ] `KLAVIYO_PRIVATE_KEY` — private API key, scoped to the permissions needed
-- [ ] `KLAVIYO_API_REVISION` — the pinned stable revision date
+- [ ] `KLAVIYO_PRIVATE_KEY` - private API key, scoped to the permissions needed
+- [ ] `KLAVIYO_API_REVISION` - the pinned stable revision date
 - [ ] (Client-side only, if ever used) public key / Site ID
 - [ ] Metric names and event payload shape agreed for the events being sent
 

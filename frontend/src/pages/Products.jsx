@@ -62,7 +62,7 @@ export default function Products() {
 
     async function createProduct() {
         if (!form.sku.trim() || !form.name.trim()) {
-            return setError('SKU and product name are required.');
+            return setError('SKU / item ID and product name are required.');
         }
         setError('');
         try {
@@ -122,7 +122,7 @@ export default function Products() {
         <>
             <h1>Products &amp; reorder thresholds</h1>
             <p className="sub">
-                Link each SKU to its manufacturer and set the stock level that should trigger a reorder alert.
+                Link each SKU (or Shopify inventory item ID) to its manufacturer and set the stock level that should trigger a reorder alert.
             </p>
 
             {error && <div className="banner error">{error}</div>}
@@ -131,7 +131,7 @@ export default function Products() {
                 <h2>Add product</h2>
                 <div className="row">
                     <input
-                        placeholder="SKU (e.g. ER-SER-009)"
+                        placeholder="SKU or item ID (e.g. ER-SER-009)"
                         value={form.sku}
                         onChange={(e) => updateForm('sku', e.target.value)}
                     />
@@ -168,7 +168,7 @@ export default function Products() {
                     <table>
                         <thead>
                             <tr>
-                                <th>SKU</th>
+                                <th>SKU / Item ID</th>
                                 <th>Product</th>
                                 <th>Manufacturer</th>
                                 <th className="num">Reorder threshold</th>

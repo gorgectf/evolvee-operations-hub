@@ -4,11 +4,12 @@
 
 **Integration role:** Pull (request/response). The backend makes scheduled outbound
 calls to Shopify on a `node-cron` schedule and stores the results. Initial scope is
-read-only.
+read-only. Shopify is the source for product sales, top customers, stock levels
+(inventory + locations), and revenue (daily/weekly/monthly, derived from orders).
 
 ---
 
-## REST vs GraphQL — legacy status
+## REST vs GraphQL - legacy status
 
 The REST Admin API became a legacy API on **October 1, 2024**. From **April 1, 2025**,
 all new *public* apps must be built on the GraphQL Admin API.
@@ -37,7 +38,7 @@ X-Shopify-Access-Token: {access_token}
 ```
 
 > **The token is shown once on install.** If missed, the app must be uninstalled and
-> reinstalled — this generates a new token and invalidates the old one. Store it in your
+> reinstalled - this generates a new token and invalidates the old one. Store it in your
 > environment configuration as `SHOPIFY_ACCESS_TOKEN` and never commit it.
 
 ### OAuth
@@ -57,11 +58,11 @@ configuring the custom app.
 | Module | Read scope | Write scope (if needed) |
 |---|---|---|
 | Orders | `read_orders` | `write_orders` |
-| Orders (>60 days) | `read_all_orders` | — |
-| Products | `read_products` | — |
-| Customers | `read_customers` | — |
+| Orders (>60 days) | `read_all_orders` | - |
+| Products | `read_products` | - |
+| Customers | `read_customers` | - |
 | Inventory Levels | `read_inventory` | `write_inventory` |
-| Locations | `read_locations` | — |
+| Locations | `read_locations` | - |
 
 > By default the Order API only returns the **last 60 days**. To retrieve older data,
 > request `read_all_orders` **in addition to** `read_orders`. Shopify only approves this
@@ -84,7 +85,7 @@ Base URL pattern: `https://{shop}.myshopify.com/admin/api/2026-01/`
 Useful list params: `status`, `financial_status`, `fulfillment_status`,
 `created_at_min`, `created_at_max`, `limit` (max 250), `since_id`.
 
-> You can't change items or quantities on an order via REST — that requires GraphQL.
+> You can't change items or quantities on an order via REST - that requires GraphQL.
 
 ### Products
 
@@ -126,7 +127,7 @@ Product Variant  →  InventoryItem  →  InventoryLevel  →  Location
 | List locations | `GET /locations.json` |
 
 > `GET /inventory_levels.json` **requires** either `inventory_item_ids` or `location_id`
-> — it returns nothing without one of them.
+> - it returns nothing without one of them.
 
 ---
 
@@ -150,11 +151,11 @@ Design sync jobs around the sustained leak rate of your plan.
 ### Handling strategy (node-cron sync jobs)
 
 1. **Read `X-Shopify-Shop-Api-Call-Limit`** on every response; back off above ~35/40.
-2. **Space scheduled jobs** — hourly inventory/order syncs sit well within limits; don't
+2. **Space scheduled jobs** - hourly inventory/order syncs sit well within limits; don't
    fire all calls on a single cron tick.
 3. **Exponential back-off** on any 429: read `Retry-After`, wait, retry once, then fail
    with an error log.
-4. **Batch where possible** — use `limit=250` on list endpoints rather than small pages.
+4. **Batch where possible** - use `limit=250` on list endpoints rather than small pages.
 
 Rate limits are measured per-app, per-store.
 
@@ -164,14 +165,14 @@ Rate limits are measured per-app, per-store.
 
 Shopify releases versions quarterly (`YYYY-01`, `-04`, `-07`, `-10`). Current stable:
 **2026-01**. Versions are supported for a minimum of 12 months after release. Pin to a
-specific version in the base URL and upgrade deliberately — never `latest` in production.
+specific version in the base URL and upgrade deliberately - never `latest` in production.
 
 ---
 
 ## Credentials checklist (sample → live)
 
-- [ ] `SHOPIFY_SHOP` — the `{shop}` subdomain for the target store
-- [ ] `SHOPIFY_ACCESS_TOKEN` — Admin API access token (shown once on install)
+- [ ] `SHOPIFY_SHOP` - the `{shop}` subdomain for the target store
+- [ ] `SHOPIFY_ACCESS_TOKEN` - Admin API access token (shown once on install)
 - [ ] Confirmation that all required scopes above are granted on the custom app
 - [ ] Protected customer data access enabled (if PII appears in order responses)
 

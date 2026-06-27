@@ -13,6 +13,38 @@ function base() {
     return 'https://' + env.shopify.storeDomain + '/admin/api/' + env.shopify.apiVersion;
 }
 
+function nextPageUrl(linkHeader) {
+    if (!linkHeader) {
+        return null;
+    }
+
+    for (const part of linkHeader.split(',')) {
+        const match = part.match(/<([^>]+)>;\s*rel="next"/);
+        if (match) {
+            return match[1];
+        }
+    }
+
+    return null;
+}
+
+async function fetchAllPages(firstUrl, key) {
+    const out = [];
+    let next = firstUrl;
+
+    while (next) {
+        const result = await callExternal(next, { headers: headers() }, { includeHeaders: true });
+
+        for (const item of (result.data[key] || [])) {
+            out.push(item);
+        }
+
+        next = nextPageUrl(result.headers.get('link'));
+    }
+
+    return out;
+}
+
 async function getSalesOverview() {
     const mode = env.modes.shopify;
 
@@ -168,4 +200,133 @@ async function getDailyRevenue() {
     }
 }
 
-module.exports = { getSalesOverview, getTopCustomers, getDailyRevenue };
+async function getStockLevels() {
+    const mode = env.modes.shopify;
+
+    if (mode === 'off') {
+        await recordSync('shopify', 'off', true);
+        return [];
+    }
+
+    try {
+        let items;
+
+        if (mode === 'sample') {
+            items = sample.inventory;
+        } else {
+            const products = await fetchAllPages(
+                base() + '/products.json?limit=250&fields=title,variants',
+                'products'
+            );
+
+            const bySku = {};
+            const itemToSku = {};
+            for (const p of products) {
+                for (const v of (p.variants || [])) {
+                    const sku = v.sku || (v.inventory_item_id ? String(v.inventory_item_id) : null);
+                    if (!sku) {
+                        continue;
+                    }
+
+                    const variantName = v.title && v.title !== 'Default Title'
+                        ? p.title + ' - ' + v.title
+                        : p.title;
+
+                    bySku[sku] = {
+                        sku: sku,
+                        inventory_item_id: v.inventory_item_id ? String(v.inventory_item_id) : null,
+                        name: variantName,
+                        stock_on_hand: 0,
+                        reorder_level: 0
+                    };
+
+                    if (v.inventory_item_id) {
+                        itemToSku[v.inventory_item_id] = sku;
+                    }
+                }
+            }
+
+            const itemIds = Object.keys(itemToSku);
+            for (let i = 0; i < itemIds.length; i += 50) {
+                const chunk = itemIds.slice(i, i + 50);
+
+                const levelsUrl =
+                    base() +
+                    '/inventory_levels.json?inventory_item_ids=' + chunk.join(',') +
+                    '&limit=250';
+
+                const levels = await fetchAllPages(levelsUrl, 'inventory_levels');
+
+                for (const lvl of levels) {
+                    const sku = itemToSku[lvl.inventory_item_id];
+                    if (sku && bySku[sku]) {
+                        bySku[sku].stock_on_hand += Number(lvl.available || 0);
+                    }
+                }
+            }
+
+            items = Object.values(bySku);
+        }
+
+        await recordSync('shopify', mode, true);
+        return items;
+    } catch (err) {
+        await recordSync('shopify', mode, false, err.message);
+        throw err;
+    }
+}
+
+async function getMonthlyRevenue() {
+    const mode = env.modes.shopify;
+
+    if (mode === 'off') {
+        await recordSync('shopify', 'off', true);
+        return [];
+    }
+
+    try {
+        let months;
+
+        if (mode === 'sample') {
+            months = sample.revenue_monthly;
+        } else {
+            const yearMs = 365 * 864e5;
+            const since = new Date(Date.now() - yearMs).toISOString();
+
+            const url =
+                base() +
+                '/orders.json?status=any' +
+                '&financial_status=paid' +
+                '&created_at_min=' + since +
+                '&limit=250' +
+                '&fields=created_at,total_price';
+
+            const orders = await fetchAllPages(url, 'orders');
+
+            const byMonth = {};
+            for (const o of orders) {
+                const m = o.created_at.slice(0, 7);
+                byMonth[m] = (byMonth[m] || 0) + Number(o.total_price);
+            }
+
+            const monthKeys = Object.keys(byMonth);
+            monthKeys.sort();
+
+            months = [];
+            for (const month of monthKeys) {
+                months.push({
+                    month: month,
+                    revenue: byMonth[month]
+                });
+            }
+        }
+
+        await recordSync('shopify', mode, true);
+        return months;
+    } catch (err) {
+        await recordSync('shopify', mode, false, err.message);
+        throw err;
+    }
+}
+
+module.exports = { getSalesOverview, getTopCustomers, getDailyRevenue, getStockLevels, getMonthlyRevenue };

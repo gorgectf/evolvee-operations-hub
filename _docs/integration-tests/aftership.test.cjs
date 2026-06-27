@@ -1,4 +1,3 @@
-// AfterShip — checks the API key by listing one tracking.
 const { http, mode, need, run } = require('./_runner.cjs');
 
 async function test() {

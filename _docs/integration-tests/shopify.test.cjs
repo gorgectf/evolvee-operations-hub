@@ -1,4 +1,3 @@
-// Shopify — checks the Admin API credentials by reading one order (read_orders).
 const { http, mode, need, run } = require('./_runner.cjs');
 
 async function test() {

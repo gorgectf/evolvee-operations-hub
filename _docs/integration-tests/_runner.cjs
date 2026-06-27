@@ -1,30 +1,16 @@
-// Shared helpers for the live integration connectivity tests.
-//
-// Each test in this folder makes a REAL request to one external service using the
-// credentials in backend/.env, and reports full detail on failure. A service is
-// SKIPped (not failed) unless its *_MODE is set to "live", matching how the app
-// decides to make live calls.
-//
-// Dependency-free on purpose: these files live outside backend/, where its
-// node_modules isn't resolvable. fetch is global on Node 20+, and the .env reader
-// below replaces dotenv.
-
 const fs = require('fs');
 const path = require('path');
 
-// ponytail: minimal .env reader — handles KEY=VALUE, blank lines, #-comment lines
-// and surrounding quotes. No multiline/export/inline-comment support; the project's
-// .env doesn't use them. Swap in dotenv if the format grows.
 function loadEnv(file) {
     let text;
     try {
         text = fs.readFileSync(file, 'utf8');
     } catch (err) {
-        return; // no .env file -> fall back to the real process.env
+        return;
     }
     for (const line of text.split(/\r?\n/)) {
         const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
-        if (!match) continue; // comment / blank / malformed
+        if (!match) continue;
         const key = match[1];
         let value = match[2].trim();
         const quoted = (value.startsWith('"') && value.endsWith('"')) ||
@@ -38,10 +24,8 @@ loadEnv(path.join(__dirname, '..', '..', 'backend', '.env'));
 
 const TIMEOUT_MS = Number(process.env.INTEGRATION_TEST_TIMEOUT_MS || 20000);
 
-// Thrown to mark a test as skipped rather than failed.
 class SkipError extends Error {}
 
-// Skip the test unless the given *_MODE env var is "live".
 function mode(varName) {
     const value = (process.env[varName] || '').toLowerCase();
     if (value !== 'live') {
@@ -52,7 +36,6 @@ function mode(varName) {
     return value;
 }
 
-// Fail the test with a clear message if any required .env value is missing.
 function need(...names) {
     const missing = names.filter((n) => !(process.env[n] && process.env[n].trim()));
     if (missing.length) {
@@ -60,13 +43,10 @@ function need(...names) {
     }
 }
 
-// Hide secrets that travel in query strings (Zoho's token endpoint) before logging.
 function redact(url) {
     return url.replace(/(client_secret|client_id|refresh_token)=[^&]*/gi, '$1=***');
 }
 
-// Make the request and return parsed JSON ({} for an empty 2xx body). On any
-// failure throw an Error carrying a .detail object the reporter prints in full.
 async function http(url, options = {}) {
     const method = options.method || 'GET';
     const controller = new AbortController();
@@ -74,7 +54,7 @@ async function http(url, options = {}) {
 
     let response;
     try {
-        response = await fetch(url, Object.assign({}, options, { signal: controller.signal }));
+        response = await fetch(url, Object.assign({ redirect: 'manual' }, options, { signal: controller.signal }));
     } catch (err) {
         const wrapped = new Error(
             err.name === 'AbortError'
@@ -115,7 +95,6 @@ async function http(url, options = {}) {
     }
 }
 
-// Zoho's three services share one OAuth refresh -> access token exchange.
 let zohoTokenCache = null;
 async function zohoToken() {
     if (zohoTokenCache) return zohoTokenCache;
@@ -137,8 +116,6 @@ async function zohoToken() {
     return zohoTokenCache;
 }
 
-// Run an array of { name, test } and print a per-test line plus a summary.
-// Sets process.exitCode to 1 if anything failed (skips don't count).
 async function run(tests) {
     let passed = 0, failed = 0, skipped = 0;
     console.log('Integration connectivity tests (using backend/.env)\n');

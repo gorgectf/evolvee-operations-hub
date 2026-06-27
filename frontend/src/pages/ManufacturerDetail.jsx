@@ -255,14 +255,14 @@ export default function ManufacturerDetail() {
 
                     {data.products.length === 0 ? (
                         <p className="empty">
-                            No SKUs assigned. Assign products on the{' '}
+                            No SKUs / item IDs assigned. Assign products on the{' '}
                             <Link to="/products">Products &amp; thresholds</Link> page.
                         </p>
                     ) : (
                         <table>
                             <thead>
                                 <tr>
-                                    <th>SKU</th>
+                                    <th>SKU / Item ID</th>
                                     <th>Product</th>
                                     <th className="num">Reorder threshold</th>
                                 </tr>

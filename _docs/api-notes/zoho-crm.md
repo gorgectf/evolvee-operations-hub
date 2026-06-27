@@ -9,13 +9,13 @@ scheduled `node-cron` job to drive the top-customers view.
 
 ## Authentication
 
-Uses the **shared Zoho OAuth flow** — see **`zoho-auth.md`** for the full setup
+Uses the **Zoho OAuth flow** - see **`zoho-auth.md`** for the full setup
 (regional data centre, Self Client, grant → refresh token exchange, token lifetimes).
 
 - Required scope: **`ZohoCRM.modules.contacts.READ`**
 - Auth header: `Authorization: Zoho-oauthtoken {access_token}`
 - Base URL: `https://{api}/crm/{version}` (where `{api}` is the regional API domain).
-  **Verify the current version** — `v8` at time of writing.
+  **Verify the current version** - `v8` at time of writing.
 
 ---
 
@@ -32,7 +32,7 @@ Returns contact records.
 > CRM uses **module names with capital letters** (`Contacts`, not `contacts`). Casing
 > matters in the path.
 
-Unlike Inventory and Books, CRM does **not** require `organization_id`.
+CRM does **not** require an `organization_id` query parameter.
 
 ---
 
@@ -57,4 +57,4 @@ model that varies by plan/edition. **Retry on `429`** with your own back-off (no
 
 - Zoho CRM API: <https://www.zoho.com/crm/developer/docs/api/>
 
-**Related:** `zoho-auth.md`, `zoho-inventory.md`, `zoho-books.md`
+**Related:** `zoho-auth.md`
