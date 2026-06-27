@@ -11,7 +11,7 @@ works before flipping the app to live mode.
 From the project root (Node 20+, no `npm install` needed — these are dependency-free):
 
 ```powershell
-.\test-integrations.bat          # all services, one summary
+_docs\test-integrations.bat      # all services, one summary
 node _docs\integration-tests\run-all.cjs
 node _docs\integration-tests\shopify.test.cjs   # a single service
 ```
