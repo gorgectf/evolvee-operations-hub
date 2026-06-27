@@ -25,8 +25,8 @@ Detailed setup steps live in [`_docs/setup-help/`](_docs/setup-help/) - links be
 10. [Project structure reference](_docs/setup-help/project-structure.md)
 
 Other:
-[Browser Support](_docs/browser-support.md)
-[Going from 'Sample' to 'Live' on a deployed site](_docs/going-live.md)
+11. [Browser Support](_docs/browser-support.md).
+12. [Going from 'Sample' to 'Live' on a deployed site](_docs/going-live.md)
 
 ---
 
