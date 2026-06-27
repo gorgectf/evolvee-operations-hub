@@ -6,10 +6,11 @@
   "type": "commonjs",
   "scripts": {
     "start": "node src/server.js",
-    "test": "node test-integrations.cjs",
+    "test": "node ../_docs/integration-tests/run-all.cjs",
     "dev": "node --watch src/server.js",
     "db:schema": "node db/applySchema.js",
     "db:seed": "node db/seed.js",
+    "db:seed:admin": "node db/seedAdmin.js",
     "db:reset": "node db/resetSchema.js"
   },
   "engines": { "node": ">=20" },

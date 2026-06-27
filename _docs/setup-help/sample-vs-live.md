@@ -26,7 +26,10 @@ In **sample** mode the backend serves realistic bundled JSON (in
    `SHOPIFY_ACCESS_TOKEN`, or the Zoho `CLIENT_ID` / `CLIENT_SECRET` /
    `REFRESH_TOKEN` trio). Credentials are provided by the account owner.
 2. Change that source's `*_MODE` to `live`.
-3. Restart the backend (`Ctrl+C`, then `npm start`).
+3. Confirm the credentials actually connect by running the
+   [integration connectivity tests](../integration-tests/README.md)
+   (`.\test-integrations.bat`) — each live source reports PASS or a full error.
+4. Restart the backend (`Ctrl+C`, then `npm start`).
 
 If a live call fails, the dashboard shows a sync-failure banner rather than silently
 showing stale data — check the **sync status** indicator and the backend console output.

@@ -56,11 +56,19 @@ services:
           # already reads process.env.PORT; setting one here causes "no open ports
           # detected".
 
-          # Seed the demo accounts on the first boot against an empty database. Seeding is
-          # guarded (it skips a non-empty DB), so this is safe to leave as-is; set it to
-          # false on the service's Environment page once the first deploy has seeded.
+          # Live deploy: seed a SINGLE admin user on the first boot against an empty
+          # database (not the demo accounts). Seeding is guarded (it skips a non-empty DB),
+          # so this is safe to leave as-is; set it to false on the service's Environment
+          # page once the first deploy has seeded. Use "demo" instead for a sandbox.
           - key: AUTO_SEED
-            value: "true"
+            value: "admin"
+
+          # The first admin login. You are prompted for this during Blueprint creation.
+          - key: ADMIN_EMAIL
+            sync: false
+          # ADMIN_PASSWORD is intentionally NOT set here: leave it unset and the server
+          # generates a strong password once and prints it in the deploy logs. Add it as
+          # an environment variable only if you want to choose the password yourself.
 
           # External integrations — leave on sample/placeholder until credentials arrive,
           # then switch one source at a time.

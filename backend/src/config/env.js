@@ -49,7 +49,15 @@ function envOr(name, fallback) {
 }
 
 const port = parseInt(process.env.PORT || '4000', 10);
-const autoSeed = (process.env.AUTO_SEED || 'false').toLowerCase() === 'true';
+
+// AUTO_SEED selects what (if anything) is seeded on startup against an empty DB:
+//   "demo"  - full demo dataset (db/seed.js): 5 role users, manufacturers, products
+//   "admin" - a single admin user only (db/seedAdmin.js): for live/online deploys
+//   "false" - nothing (default; seed manually with npm run db:seed[:admin])
+// "true" is kept as an alias for "demo" for backward compatibility.
+const seedModeRaw = (process.env.AUTO_SEED || 'false').toLowerCase();
+const seedMode = seedModeRaw === 'true' ? 'demo' : seedModeRaw;
+const autoSeed = seedMode === 'demo' || seedMode === 'admin';
 
 const env = {
     port: port,
@@ -61,6 +69,7 @@ const env = {
     jwtExpiresIn: envOr('JWT_EXPIRES_IN', '8h'),
     corsOrigins: parseCorsOrigins(),
     autoSeed: autoSeed,
+    seedMode: seedMode,
     stockCheckCron: envOr('STOCK_CHECK_CRON', '0 * * * *'),
 
     modes: {

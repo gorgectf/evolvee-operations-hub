@@ -5,6 +5,7 @@ const { errorHandler } = require('./middleware/errorHandler');
 const { scheduleStockCheck, runStockCheck } = require('./jobs/stockCheck');
 const { ensureSchema } = require('../db/applySchema');
 const { seed } = require('../db/seed');
+const { seedAdmin } = require('../db/seedAdmin');
 
 const app = express();
 
@@ -48,7 +49,7 @@ async function startBackgroundTasks() {
 
     if (env.autoSeed) {
         try {
-            await seed();
+            await (env.seedMode === 'admin' ? seedAdmin() : seed());
         } catch (err) {
             console.error('Auto-seed failed on startup:', err.message);
         }
