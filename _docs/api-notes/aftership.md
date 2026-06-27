@@ -9,24 +9,6 @@ shipping data arrives *unsolicited* at a webhook endpoint, not via polling.
 
 ---
 
-## Why this stays on AfterShip (not folded into Shopify)
-
-Sales, customers, stock, and revenue were consolidated onto Shopify. Shipping was
-**deliberately left on AfterShip** because the fields that matter can't move without
-losing information:
-
-| Field used by the shipping view | Shopify equivalent | Verdict |
-|---|---|---|
-| `status` (incl. `Exception`) | `fulfillment.shipment_status` | Lossy - no `Exception` value, coarser, often unset unless a carrier app pushes updates |
-| `last_update` | `fulfillment.updated_at` | Different fact - record-change time, not the carrier's last scan |
-| `courier` (slug) | `fulfillment.tracking_company` | Lossy - free-text display name, not a stable slug |
-| `tracking_number`, `order_id` | `fulfillment.tracking_number`, `order.name` | Identical, but already correct via AfterShip - sourcing from Shopify needs a join for zero gain |
-
-Net: AfterShip's live, carrier-normalised tracking status (especially exception
-detection) has no zero-loss Shopify substitute, so the shipping module keeps using it.
-
----
-
 ## Base URL
 
 ```
