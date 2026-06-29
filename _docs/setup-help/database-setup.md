@@ -2,18 +2,17 @@
 
 ← [Back to README](../../README.md)
 
-The app uses its own database (`operations_hub`) and its own database user (`opshub`),
-so it never touches anything else on your machine.
+The app uses its own database (`operations_hub`) and its own user (`opshub`), so it
+won't touch anything else on your machine.
 
-Open PowerShell and connect as the `postgres` superuser (it will prompt for the password
-you set during installation):
+Connect as the `postgres` superuser (it'll prompt for the password you set during install):
 
 ```powershell
 psql -U postgres
 ```
 
-At the `postgres=#` prompt, paste these three lines (you can change the password — just
-remember to use the same one in `.env` later):
+At the `postgres=#` prompt, paste these three lines. You can change the password, just
+use the same one in `.env` later:
 
 ```sql
 CREATE USER opshub WITH PASSWORD 'opshub_dev_password';
@@ -21,7 +20,7 @@ CREATE DATABASE operations_hub OWNER opshub;
 \q
 ```
 
-That's it. The tables get created automatically by a script in the next step.
+That's it. The tables are created automatically in the next step.
 
 ---
 

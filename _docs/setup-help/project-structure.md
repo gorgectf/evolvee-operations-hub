@@ -23,8 +23,7 @@ operations-hub/
 │       ├── jobs/             # stockCheck.js (node-cron)
 │       └── services/
 │           ├── apiClient.js  # external fetch wrapper + sync status recording
-│           ├── integrations/ # shopify, zohoCrm, aftership,
-│           │                 # qrPartner (placeholder), zohoAuth
+│           ├── integrations/ # shopify, zohoCrm, aftership, zohoAuth
 │           └── sampleData/   # bundled JSON used in sample mode
 └── frontend/
     ├── package.json

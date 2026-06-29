@@ -1,10 +1,10 @@
-# Browser Support
+# Browser support
 
 ← [Back to README](../../README.md)
 
-This document lists the browsers that have been tested with the Operations Hub.
+Browsers tested the Operations Hub on.
 
-The app is a React (Vite) single-page application. It requires JavaScript enabled and a browser that supports ES2020+ natively (no IE11 polyfills are included).
+The app is a React (Vite) single-page app. It needs JavaScript and a browser with native ES2020+ support (no IE11 polyfills are bundled).
 
 ---
 
@@ -22,4 +22,3 @@ The app is a React (Vite) single-page application. It requires JavaScript enable
 ## Known limitations
 
 None known (2026-06-24).
-

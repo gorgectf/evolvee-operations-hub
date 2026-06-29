@@ -1,10 +1,10 @@
 # Klaviyo API
 
-*Service reference · outbound event & profile sync*
+Service reference, outbound event & profile sync.
 
-**Integration role:** **Outbound only.** The host application *sends* events and profile
-data to Klaviyo; nothing is pulled back in initial scope. Marketing performance analytics
-(reading Klaviyo data back out) is a deferred concern.
+Integration role: outbound only. The app sends events and profile data to Klaviyo; nothing
+is pulled back in the initial scope. Reading Klaviyo data back out for marketing
+performance analytics is deferred.
 
 ---
 
@@ -14,20 +14,20 @@ data to Klaviyo; nothing is pulled back in initial scope. Marketing performance 
 https://a.klaviyo.com/api/
 ```
 
-Klaviyo versions its API with **revisions** - ISO 8601 dates passed in a **`revision`**
-request header (e.g. `revision: 2024-10-15`), not in the URL.
+Klaviyo versions its API with revisions, ISO 8601 dates passed in a `revision` request
+header (e.g. `revision: 2024-10-15`), not in the URL.
 
-- **Pin to a specific stable revision.** Check the revision dropdown in the Klaviyo
-  developer docs for the current latest stable revision and use that exact date; upgrade
+- Pin to a specific stable revision. Check the revision dropdown in the Klaviyo developer
+  docs for the current latest stable revision and use that exact date; upgrade
   deliberately.
-- Beta revisions carry a **`.pre`** suffix (e.g. `2026-04-15.pre`) and **must not** be
-  used in production.
-- A breaking change is gated behind a new revision; Klaviyo gives 30 days' notice before
+- Beta revisions carry a `.pre` suffix (e.g. `2026-04-15.pre`) and must not be used in
+  production.
+- Breaking changes are gated behind a new revision; Klaviyo gives 30 days' notice before
   altering an existing one. Omitting the header (or using a stale value) can trigger
   deprecated behaviour.
 
-Store the chosen revision as a constant in your environment configuration (e.g.
-`KLAVIYO_API_REVISION`) so every request sends the same one.
+Store the chosen revision as a constant (e.g. `KLAVIYO_API_REVISION`) so every request
+sends the same one.
 
 ---
 
@@ -37,8 +37,8 @@ Two key types:
 
 | Key | Used for | Header / param |
 |---|---|---|
-| **Private API key** | Server-side `/api` endpoints | `Authorization: Klaviyo-API-Key {private_key}` |
-| **Public key (Site ID)** | Client-side `/client` endpoints only | `?company_id={public_key}` |
+| Private API key | Server-side `/api` endpoints | `Authorization: Klaviyo-API-Key {private_key}` |
+| Public key (Site ID) | Client-side `/client` endpoints only | `?company_id={public_key}` |
 
 Server-side request shape:
 
@@ -50,14 +50,14 @@ content-type: application/vnd.api+json
 accept: application/json
 ```
 
-> **Never use a private key with client-side `/client` endpoints.** The private key reads
-> and writes sensitive account data - treat it like a password, keep it in your
-> environment configuration (`KLAVIYO_PRIVATE_KEY`), and scope it to only the permissions
-> this integration needs. A new private key can be created/deactivated at any time if
-> exposed.
+> Never use a private key with client-side `/client` endpoints. The private key reads and
+> writes sensitive account data, so treat it like a password, keep it in
+> `KLAVIYO_PRIVATE_KEY`, and scope it to only the permissions this integration needs. A new
+> private key can be created or deactivated at any time if one is exposed.
 
-Klaviyo uses the **JSON:API** spec - request/response bodies wrap data in a `data` object
-with `type` and `attributes`; `PATCH` requests must include the resource `type` and `id`.
+Klaviyo follows the JSON:API spec: request/response bodies wrap data in a `data` object
+with `type` and `attributes`, and `PATCH` requests must include the resource `type` and
+`id`.
 
 ---
 
@@ -68,15 +68,15 @@ with `type` and `attributes`; `PATCH` requests must include the resource `type` 
 | Action | Endpoint | Notes |
 |---|---|---|
 | Create event | `POST /api/events/` | Server-side. Can also create/update the profile it references. |
-| Bulk create events | `POST /api/event-bulk-create-jobs/` | Up to **1,000 events** per request. |
+| Bulk create events | `POST /api/event-bulk-create-jobs/` | Up to 1,000 events per request. |
 
-At a minimum, an event needs a **profile identifier** (`id`, `email`, or `phone_number`)
-and a **metric name**. A successful call returns **`202 Accepted`** - this means the event
-was validated and queued, **not** that processing finished.
+An event needs at least a profile identifier (`id`, `email`, or `phone_number`) and a
+metric name. A successful call returns `202 Accepted`, meaning the event was validated and
+queued, not that processing finished.
 
-> **Idempotency / de-duplication:** events de-duplicate on the tuple
-> `(profile, metric, unique_id)`. Set a distinct **`unique_id`** per event you intend to
-> be distinct, or genuinely separate events may be silently discarded as duplicates.
+> De-duplication: events de-dupe on the tuple `(profile, metric, unique_id)`. Set a
+> distinct `unique_id` per event you want kept distinct, or genuinely separate events may
+> be silently discarded as duplicates.
 
 ### Profiles
 
@@ -87,21 +87,21 @@ was validated and queued, **not** that processing finished.
 | Subscribe profiles | `POST /api/profile-subscription-bulk-create-jobs/` |
 
 > A profile needs at least one identifier (`email`, `phone_number`, `external_id`, or
-> `anonymous_id`). Updating an existing profile's identifiers must be done **server-side**
-> with the private key - client-side attempts return `202` but won't apply the change.
+> `anonymous_id`). Updating an existing profile's identifiers must be done server-side with
+> the private key; client-side attempts return `202` but won't apply the change.
 
 ---
 
 ## Rate limits
 
-All endpoints are rate limited **per account**, using a **fixed-window** algorithm with
-two windows that apply simultaneously:
+Every endpoint is rate limited per account, using a fixed-window algorithm with two windows
+that apply at the same time:
 
-- **Burst** - a 1-second window
-- **Steady** - a 1-minute window
+- Burst: a 1-second window
+- Steady: a 1-minute window
 
 Each endpoint is assigned a tier (XS / S / M / L / XL); the burst and steady figures for
-that tier are listed on the endpoint's reference page. Illustrative tiers:
+that tier are on the endpoint's reference page. Example tiers:
 
 | Tier | Burst | Steady |
 |---|---|---|
@@ -111,26 +111,25 @@ that tier are listed on the endpoint's reference page. Illustrative tiers:
 | L | 75/s | 700/m |
 | XL | 350/s | 3,500/m |
 
-> Always read the **specific endpoint's** documented limit rather than assuming a tier -
-> some parameters (e.g. extra `include`/`additional-fields`) change the effective limit.
+> Read the specific endpoint's documented limit rather than assuming a tier. Some
+> parameters (e.g. extra `include`/`additional-fields`) change the effective limit.
 
-**Handling:**
+Handling:
 
-- Hitting either window returns **`429`**; read the **`Retry-After`** header and wait.
-- Use **exponential back-off** if you hit limits consistently.
-- Non-429 responses include `RateLimit`-style headers showing remaining quota - monitor
-  these to throttle proactively.
-- Maximum payload size is **5 MB** (decompressed); a single string field cannot exceed
-  **100 KB**.
+- Hitting either window returns `429`; read the `Retry-After` header and wait.
+- Use exponential back-off if you hit limits consistently.
+- Non-429 responses include `RateLimit`-style headers showing remaining quota; watch them
+  to throttle proactively.
+- Maximum payload size is 5 MB (decompressed); a single string field can't exceed 100 KB.
 
-For high volume, prefer the **bulk** endpoints over many single calls.
+For high volume, prefer the bulk endpoints over many single calls.
 
 ---
 
 ## Credentials checklist (sample → live)
 
-- [ ] `KLAVIYO_PRIVATE_KEY` - private API key, scoped to the permissions needed
-- [ ] `KLAVIYO_API_REVISION` - the pinned stable revision date
+- [ ] `KLAVIYO_PRIVATE_KEY`, private API key scoped to the permissions needed
+- [ ] `KLAVIYO_API_REVISION`, the pinned stable revision date
 - [ ] (Client-side only, if ever used) public key / Site ID
 - [ ] Metric names and event payload shape agreed for the events being sent
 

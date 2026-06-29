@@ -2,7 +2,7 @@
 
 ← [Back to README](../../README.md)
 
-In a **second** PowerShell window:
+In a second PowerShell window:
 
 ```powershell
 cd path\to\operations-hub\frontend
@@ -10,12 +10,10 @@ npm install
 npm run dev
 ```
 
-In short you can do: npm install; npm run dev
+Vite prints a local URL. Open http://localhost:5173 in your browser.
 
-You should see Vite print a local URL. Open **http://localhost:5173** in your browser.
-
-You don't need a frontend `.env` for local development — Vite proxies `/api` requests to
-the backend on port 4000 automatically (configured in `vite.config.js`).
+You don't need a frontend `.env` for local dev. Vite proxies `/api` requests to the
+backend on port 4000 automatically (set in `vite.config.js`).
 
 ---
 
