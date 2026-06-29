@@ -6,6 +6,7 @@ function logError(req, errorMessage) {
 }
 
 
+// Map Postgres error codes to safe client-facing responses.
 const PG_ERROR_RESPONSES = {
     '23505': { status: 409, message: 'That value is already in use.' },
     '23503': { status: 400, message: 'A referenced record does not exist.' },

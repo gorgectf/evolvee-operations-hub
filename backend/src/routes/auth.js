@@ -23,6 +23,7 @@ router.post('/login', asyncRoute(async (req, res) => {
         [normalisedEmail]
     );
 
+    // Same message for unknown email and wrong password.
     const user = result.rows[0];
     if (!user) {
         return res.status(401).json({ error: 'Incorrect email or password.' });

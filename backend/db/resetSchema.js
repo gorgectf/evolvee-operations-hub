@@ -3,6 +3,7 @@ const { ensureSchema } = require('./applySchema');
 
 async function resetSchema() {
     try {
+        // Destructive: drops every table in the public schema, then rebuilds.
         await query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
         await ensureSchema();
         console.log('O: Database reset: all tables dropped and re-created.');

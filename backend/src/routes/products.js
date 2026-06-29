@@ -85,6 +85,7 @@ router.put('/:id/threshold', asyncRoute(async (req, res) => {
     }
 
     const productId = Number(req.params.id);
+    // Upsert: one threshold row per product.
     const sql =
         'INSERT INTO reorder_thresholds (product_id, threshold) ' +
         'VALUES ($1, $2) ' +

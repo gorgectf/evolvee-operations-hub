@@ -3,6 +3,7 @@ const { query } = require('../config/db');
 const env = require('../config/env');
 const shopify = require('../services/integrations/shopify');
 
+// Skip if an open or acknowledged alert already exists for this product.
 async function alertIfLowStock(productId, currentStock, threshold) {
     const existingAlert = await query(
         `SELECT id FROM reorder_alerts WHERE product_id = $1 AND status IN ('open', 'acknowledged')`,
@@ -24,6 +25,7 @@ async function alertIfLowStock(productId, currentStock, threshold) {
 async function runStockCheck() {
     const stockLevels = await shopify.getStockLevels();
 
+    // Index stock by item id and SKU so either can match a threshold row.
     const stockByKey = {};
     for (const stockItem of stockLevels) {
         if (stockItem.inventory_item_id != null) {
@@ -43,6 +45,7 @@ async function runStockCheck() {
     let alertsCreated = 0;
 
     for (const row of thresholds) {
+        // Match on item id first, then fall back to SKU.
         let currentStock = row.shopify_inventory_item_id != null
             ? stockByKey[row.shopify_inventory_item_id]
             : undefined;

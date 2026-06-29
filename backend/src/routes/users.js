@@ -93,6 +93,7 @@ router.patch('/:id', asyncRoute(async (req, res) => {
         return res.status(400).json({ error: 'Password must be at least 8 characters.' });
     }
 
+    // Don't let the last active admin lose admin access.
     const removingAdminRole = role !== undefined && role !== 'admin' && current.role === 'admin';
     const deactivatingAdmin = isActive === false && current.role === 'admin' && current.is_active;
 

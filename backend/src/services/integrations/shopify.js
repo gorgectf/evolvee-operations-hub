@@ -13,6 +13,7 @@ function base() {
     return 'https://' + env.shopify.storeDomain + '/admin/api/' + env.shopify.apiVersion;
 }
 
+// Read the rel="next" cursor URL out of Shopify's Link header.
 function nextPageUrl(linkHeader) {
     if (!linkHeader) {
         return null;
@@ -28,6 +29,7 @@ function nextPageUrl(linkHeader) {
     return null;
 }
 
+// Follow Link-header pagination until there is no next page.
 async function fetchAllPages(firstUrl, key) {
     const out = [];
     let next = firstUrl;
@@ -45,6 +47,7 @@ async function fetchAllPages(firstUrl, key) {
     return out;
 }
 
+// off: skip and report ok. sample: bundled JSON. else: live API.
 async function getSalesOverview() {
     const mode = env.modes.shopify;
 
@@ -246,6 +249,7 @@ async function getStockLevels() {
                 }
             }
 
+            // inventory_levels caps ids per request, so query in chunks of 50.
             const itemIds = Object.keys(itemToSku);
             for (let i = 0; i < itemIds.length; i += 50) {
                 const chunk = itemIds.slice(i, i + 50);

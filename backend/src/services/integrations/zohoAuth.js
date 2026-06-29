@@ -4,6 +4,7 @@ const { callExternal } = require('../apiClient');
 let cached = { token: null, expiresAt: 0 };
 
 async function getZohoAccessToken() {
+    // Reuse the cached token until it is within a minute of expiry.
     const safetyWindowMs = 60000;
     if (cached.token && Date.now() < cached.expiresAt - safetyWindowMs) {
         return cached.token;

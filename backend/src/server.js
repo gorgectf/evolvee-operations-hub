@@ -10,6 +10,7 @@ const { seedAdmin } = require('../db/seedAdmin');
 const app = express();
 
 function isAllowedOrigin(origin, callback) {
+    // No Origin header (same-origin or server-to-server): allow.
     if (!origin) {
         return callback(null, true);
     }
@@ -39,6 +40,7 @@ app.use(function (req, res) {
 });
 app.use(errorHandler);
 
+// Runs after listen() so a slow or failing DB doesn't block the server binding.
 async function startBackgroundTasks() {
     try {
         await ensureSchema();

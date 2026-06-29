@@ -12,6 +12,7 @@ function required(name, fallback) {
     return value;
 }
 
+// Reject short or placeholder secrets, but only in production.
 function requiredJwtSecret() {
     const value = required('JWT_SECRET');
     const placeholders = [
@@ -50,6 +51,7 @@ function envOr(name, fallback) {
 
 const port = parseInt(process.env.PORT || '4000', 10);
 
+// AUTO_SEED=true means 'demo'; 'admin' seeds a single admin instead.
 const seedModeRaw = (process.env.AUTO_SEED || 'false').toLowerCase();
 const seedMode = seedModeRaw === 'true' ? 'demo' : seedModeRaw;
 const autoSeed = seedMode === 'demo' || seedMode === 'admin';
@@ -70,8 +72,7 @@ const env = {
     modes: {
         shopify: envOr('SHOPIFY_MODE', 'off'),
         zohoCrm: envOr('ZOHO_CRM_MODE', 'off'),
-        aftership: envOr('AFTERSHIP_MODE', 'off'),
-        qrPartner: envOr('QR_PARTNER_MODE', 'placeholder')
+        aftership: envOr('AFTERSHIP_MODE', 'off')
     },
 
     shopify: {
@@ -90,11 +91,6 @@ const env = {
 
     aftership: {
         apiKey: envOr('AFTERSHIP_API_KEY', '')
-    },
-
-    qrPartner: {
-        apiBase: envOr('QR_PARTNER_API_BASE', ''),
-        apiKey: envOr('QR_PARTNER_API_KEY', '')
     }
 };
 

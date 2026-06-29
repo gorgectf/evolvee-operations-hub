@@ -33,10 +33,8 @@ router.get('/:id', asyncRoute(async (req, res) => {
         return res.status(404).json({ error: 'Manufacturer not found.' });
     }
 
-    const contacts = await query(
-        'SELECT * FROM manufacturer_contacts WHERE manufacturer_id = $1 ORDER BY name',
-        [id]
-    );
+    const contactsSql =
+        'SELECT * FROM manufacturer_contacts WHERE manufacturer_id = $1 ORDER BY name';
 
     const productsSql =
         'SELECT p.*, rt.threshold ' +
@@ -44,7 +42,6 @@ router.get('/:id', asyncRoute(async (req, res) => {
         'LEFT JOIN reorder_thresholds rt ON rt.product_id = p.id ' +
         'WHERE p.manufacturer_id = $1 ' +
         'ORDER BY p.sku';
-    const products = await query(productsSql, [id]);
 
     const commsSql =
         'SELECT c.*, u.full_name AS logged_by_name, mc.name AS contact_name ' +
@@ -53,7 +50,6 @@ router.get('/:id', asyncRoute(async (req, res) => {
         'LEFT JOIN manufacturer_contacts mc ON mc.id = c.contact_id ' +
         'WHERE c.manufacturer_id = $1 ' +
         'ORDER BY c.logged_at DESC';
-    const comms = await query(commsSql, [id]);
 
     const runsSql =
         'SELECT pr.*, p.sku, p.name AS product_name ' +
@@ -61,7 +57,6 @@ router.get('/:id', asyncRoute(async (req, res) => {
         'LEFT JOIN products p ON p.id = pr.product_id ' +
         'WHERE pr.manufacturer_id = $1 ' +
         'ORDER BY pr.created_at DESC';
-    const runs = await query(runsSql, [id]);
 
     const historySql =
         'SELECT rh.*, p.sku, p.name AS product_name ' +
@@ -69,7 +64,14 @@ router.get('/:id', asyncRoute(async (req, res) => {
         'JOIN products p ON p.id = rh.product_id ' +
         'WHERE rh.manufacturer_id = $1 ' +
         'ORDER BY rh.ordered_at DESC';
-    const history = await query(historySql, [id]);
+
+    const [contacts, products, comms, runs, history] = await Promise.all([
+        query(contactsSql, [id]),
+        query(productsSql, [id]),
+        query(commsSql, [id]),
+        query(runsSql, [id]),
+        query(historySql, [id])
+    ]);
 
     res.json({
         manufacturer: mfr.rows[0],
@@ -109,6 +111,7 @@ router.patch('/:id', asyncRoute(async (req, res) => {
     const notesValue = body.notes ?? null;
 
     const id = Number(req.params.id);
+    // COALESCE keeps the current value when a field is omitted.
     const sql =
         'UPDATE manufacturers SET ' +
         '    name = COALESCE($1, name), ' +

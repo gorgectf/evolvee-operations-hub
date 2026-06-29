@@ -5,7 +5,6 @@ const { asyncRoute } = require('../middleware/errorHandler');
 const shopify = require('../services/integrations/shopify');
 const zohoCrm = require('../services/integrations/zohoCrm');
 const aftership = require('../services/integrations/aftership');
-const qrPartner = require('../services/integrations/qrPartner');
 
 const router = express.Router();
 router.use(authenticate);
@@ -31,6 +30,7 @@ router.get('/inventory', requirePermission('inventory'), asyncRoute(async (req, 
 
     const items = [];
     for (const i of stock) {
+        // Threshold by item id, then SKU, then the feed's own level, else 0.
         const threshold =
             (i.inventory_item_id != null ? thresholds[i.inventory_item_id] : undefined) ??
             thresholds[i.sku] ??
@@ -69,9 +69,12 @@ router.get('/sales', requirePermission('sales'), asyncRoute(async (req, res) => 
 }));
 
 router.get('/customers', requirePermission('customers'), asyncRoute(async (req, res) => {
-    const shop = await shopify.getTopCustomers();
-    const crm = await zohoCrm.getCrmCustomers();
+    const [shop, crm] = await Promise.all([
+        shopify.getTopCustomers(),
+        zohoCrm.getCrmCustomers()
+    ]);
 
+    // Index CRM records by email to match Shopify customers.
     const crmByEmail = {};
     for (const c of crm) {
         crmByEmail[c.email] = c;
@@ -112,10 +115,12 @@ router.get('/revenue', requirePermission('revenue'), asyncRoute(async (req, res)
         shopify.getMonthlyRevenue()
     ]);
 
+    // Bucket daily revenue into Monday-start weeks.
     const weekly = {};
     for (const d of daily) {
         const dt = new Date(d.date + 'T00:00:00Z');
         const monday = new Date(dt);
+        // Days since Monday; getUTCDay has Sunday = 0.
         const offsetToMonday = (dt.getUTCDay() + 6) % 7;
         monday.setUTCDate(dt.getUTCDate() - offsetToMonday);
 
@@ -161,7 +166,7 @@ router.get('/shipping', requirePermission('shipping'), asyncRoute(async (req, re
 router.get('/alerts-summary', requirePermission('alerts'), asyncRoute(async (req, res) => {
     const sql =
         'SELECT ra.id, p.sku, p.name, ra.stock_level, ra.threshold, ra.status, ra.triggered_at, ' +
-        '       m.name AS manufacturer ' +
+        '       m.name AS manufacturer, COUNT(*) OVER()::int AS total_open ' +
         'FROM reorder_alerts ra ' +
         'JOIN products p ON p.id = ra.product_id ' +
         'LEFT JOIN manufacturers m ON m.id = p.manufacturer_id ' +
@@ -173,14 +178,13 @@ router.get('/alerts-summary', requirePermission('alerts'), asyncRoute(async (req
 
     res.json({
         open_alerts: result.rows,
-        open_count: result.rows.length
+        open_count: result.rows.length > 0 ? result.rows[0].total_open : 0
     });
 }));
 
-// QR partner dashboard module placeholder
-router.get('/partners', requirePermission('partners'), asyncRoute(async (req, res) => {
-    const data = await qrPartner.getPartnerData();
-    res.json(data);
-}));
+// QR partner dashboard is an in-house build by another team — plain placeholder until it ships.
+router.get('/partners', requirePermission('partners'), (req, res) => {
+    res.json({ message: 'QR partner dashboard is in development — coming soon.' });
+});
 
 module.exports = router;
