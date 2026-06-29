@@ -31,7 +31,7 @@ function Tile({ title, source, wide, children }) {
     );
 }
 
-// Loads one dashboard modules data when enabled.
+// Loads one dashboard module's data when enabled.
 function useModule(path, enabled) {
     const [state, setState] = useState({ loading: enabled, data: null, error: null });
 

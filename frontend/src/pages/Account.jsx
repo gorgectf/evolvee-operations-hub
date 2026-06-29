@@ -11,13 +11,11 @@ export default function Account() {
     async function submit() {
         setError('');
         setDone(false);
-
         // Confirm the new password was typed the same twice.
         if (next !== confirm) {
             setError('New passwords do not match.');
             return;
         }
-
         try {
             await api('/auth/password', {
                 method: 'POST',
@@ -66,7 +64,7 @@ export default function Account() {
                 </div>
                 <div className="field">
                     <label htmlFor="confirm">Confirm new password</label>
-
+                    
                     <input
                         id="confirm"
                         type="password"
@@ -75,7 +73,6 @@ export default function Account() {
                         autoComplete="new-password"
                     />
                 </div>
-                
                 <button className="primary" onClick={submit}>Update password</button>
             </div>
         </>

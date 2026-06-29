@@ -44,6 +44,7 @@ Prefer to do it by hand, or something failed then follow the numbered steps belo
 8. [Troubleshooting](_docs/setup-help/troubleshooting.md)
 9. [Project structure reference](_docs/setup-help/project-structure.md)
 10. [Browser support](_docs/browser-support.md)
+11. [Architecture & maintenance reference](_docs/architecture.md) — for developers changing the code
 
 ---
 
