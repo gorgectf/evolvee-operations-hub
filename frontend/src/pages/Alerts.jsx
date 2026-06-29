@@ -23,6 +23,7 @@ export default function Alerts() {
                 method: 'PATCH',
                 body: JSON.stringify({ status }),
             });
+
             load();
         } catch (e) {
             setError(e.message);
@@ -31,6 +32,7 @@ export default function Alerts() {
 
     async function remove(id) {
         if (!window.confirm('Delete this alert?')) return;
+
         try {
             await api(`/alerts/${id}`, { method: 'DELETE' });
             load();
@@ -39,6 +41,7 @@ export default function Alerts() {
         }
     }
 
+    // Run a stock check now instead of waiting for the scheduled one.
     async function checkNow() {
         setChecking(true);
         setNotice('');
@@ -47,10 +50,12 @@ export default function Alerts() {
         try {
             const result = await api('/alerts/check-now', { method: 'POST' });
             const plural = result.alerts_created === 1 ? '' : 's';
+
             setNotice(
                 `Checked ${result.checked} SKUs / item IDs against Shopify — ` +
                 `${result.alerts_created} new alert${plural} created.`
             );
+
             load();
         } catch (e) {
             setError(e.message);
@@ -62,6 +67,7 @@ export default function Alerts() {
     function statusClass(status) {
         if (status === 'open') return 'low';
         if (status === 'acknowledged') return 'warn';
+        
         return 'ok';
     }
 

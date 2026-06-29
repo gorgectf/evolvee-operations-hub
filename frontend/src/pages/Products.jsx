@@ -7,6 +7,7 @@ export default function Products() {
     const [products, setProducts] = useState(null);
     const [manufacturers, setManufacturers] = useState([]);
     const [error, setError] = useState('');
+    // In-progress threshold edits, keyed by product id.
     const [edits, setEdits] = useState({});
     const [form, setForm] = useState(EMPTY_FORM);
 
@@ -35,6 +36,7 @@ export default function Products() {
 
     async function saveThreshold(product) {
         const value = edits[product.id];
+        // Nothing to save if the field is untouched or cleared.
         if (value === undefined || value === '') return;
         try {
             await api(`/products/${product.id}/threshold`, {
@@ -107,6 +109,7 @@ export default function Products() {
                         type="number"
                         min="0"
                         style={{ maxWidth: 90, textAlign: 'right' }}
+                        // Show the pending edit if there is one, else the saved value.
                         value={edits[product.id] ?? product.threshold ?? ''}
                         onChange={(e) => updateEdit(product.id, e.target.value)}
                     />

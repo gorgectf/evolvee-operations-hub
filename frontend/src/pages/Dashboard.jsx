@@ -31,12 +31,14 @@ function Tile({ title, source, wide, children }) {
     );
 }
 
+// Loads one dashboard modules data when enabled.
 function useModule(path, enabled) {
     const [state, setState] = useState({ loading: enabled, data: null, error: null });
 
     useEffect(() => {
         if (!enabled) return;
 
+        // Skip state updates if the effect was cleaned up before the fetch resolved.
         let active = true;
 
         api(path)
@@ -55,8 +57,10 @@ function useModule(path, enabled) {
     return state;
 }
 
+// Renders loading and error states; otherwise passes data to children.
 function Body({ state, children }) {
     if (state.loading) return <p className="empty">Loading…</p>;
+
     if (state.error) {
         return (
             <div className="banner error">
@@ -69,12 +73,14 @@ function Body({ state, children }) {
 
 function stockPill(isLowStock) {
     if (isLowStock) return <span className="pill low">Low</span>;
+
     return <span className="pill ok">OK</span>;
 }
 
 function shippingStatusClass(status) {
     if (status === 'Delivered') return 'ok';
     if (status === 'Exception') return 'low';
+    
     return 'info';
 }
 
@@ -94,6 +100,7 @@ export default function Dashboard() {
     const partners = useModule('/dashboard/partners', canAccess('partners'));
     const sync = useModule('/sync/status', canAccess('sync'));
 
+    // Sources that failed their most recent sync.
     const failedSources = (sync.data?.sources || []).filter((source) => source.ok === false);
 
     return (
@@ -318,35 +325,7 @@ export default function Dashboard() {
                 {canAccess('partners') && (
                     <Tile title="Partners & commissions" source="QR partner dashboard">
                         <Body state={partners}>
-                            {(data) => {
-                                if (data.placeholder) {
-                                    return (
-                                        <p className="empty">
-                                            {data.message}
-                                        </p>
-                                    );
-                                }
-                                return (
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Partner</th>
-                                                <th className="num">Scans</th>
-                                                <th className="num">Commission</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {data.partners.map((partner) => (
-                                                <tr key={partner.id}>
-                                                    <td>{partner.name}</td>
-                                                    <td className="num">{partner.scans}</td>
-                                                    <td className="num">{formatGBP(partner.commission)}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                );
-                            }}
+                            {(data) => <p className="empty">{data.message}</p>}
                         </Body>
                     </Tile>
                 )}

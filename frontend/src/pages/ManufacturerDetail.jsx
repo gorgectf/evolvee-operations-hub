@@ -34,6 +34,7 @@ export default function ManufacturerDetail() {
         load();
     }, [load]);
 
+    // POST a sub-resource, then clear its form and reload.
     async function post(path, body, reset) {
         setError('');
         try {
@@ -84,6 +85,7 @@ export default function ManufacturerDetail() {
     }
 
     function submitReorder() {
+        // Select and input values are strings; the API wants numbers.
         const body = {
             ...reorder,
             product_id: Number(reorder.product_id),

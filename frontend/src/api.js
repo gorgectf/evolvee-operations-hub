@@ -1,4 +1,7 @@
+// API base URL; empty means same origin.
 const BASE = import.meta.env.VITE_API_BASE || '';
+
+// localStorage keys for the saved session.
 const TOKEN_KEY = 'opshub_token';
 const USER_KEY = 'opshub_user';
 
@@ -25,10 +28,12 @@ export function getUser() {
     try {
         return JSON.parse(raw);
     } catch {
+        // Stored value isn't valid JSON.
         return null;
     }
 }
 
+// fetch wrapper: prefixes /api, adds JSON and auth headers, normalises errors.
 export async function api(path, options = {}) {
     const headers = { 'Content-Type': 'application/json' };
 

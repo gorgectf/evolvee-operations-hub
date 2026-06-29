@@ -29,6 +29,7 @@ export default function Manufacturers() {
     }
 
     async function create() {
+        // Name is the only required field.
         if (!form.name.trim()) {
             setError('Manufacturer name is required.');
             return;

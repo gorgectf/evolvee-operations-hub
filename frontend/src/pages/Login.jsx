@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { setSession } from '../api.js';
 
+// Network failures surface as 'Failed to fetch'; show something clearer.
 function resolveErrorMessage(err) {
     if (err.message === 'Failed to fetch') {
         return 'Cannot reach the server. Is the backend running?';
@@ -21,6 +22,7 @@ export default function Login() {
         setError('');
 
         try {
+            // Plain fetch, not api(): no token exists yet.
             const res = await fetch(`${import.meta.env.VITE_API_BASE || ''}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

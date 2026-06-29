@@ -78,5 +78,3 @@ services:
             value: sample
           - key: AFTERSHIP_MODE
             value: sample
-          - key: QR_PARTNER_MODE
-            value: placeholder

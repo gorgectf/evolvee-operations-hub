@@ -11,11 +11,14 @@ import ProductionRuns from './pages/ProductionRuns.jsx';
 import Users from './pages/Users.jsx';
 import Account from './pages/Account.jsx';
 
+// App frame: top nav plus the active route.
 function Shell() {
     const user = getUser();
     const navigate = useNavigate();
+    // True if the current user holds permission p.
     const can = (p) => user?.permissions?.includes(p);
 
+    // No token means not signed in.
     if (!getToken()) {
         return <Navigate to="/login" replace />;
     }
@@ -84,6 +87,7 @@ function Shell() {
 export default function App() {
     return (
         <Routes>
+            {/* Login is public; everything in Shell needs a token. */}
             <Route path="/login" element={<Login />} />
             <Route element={<Shell />}>
                 <Route path="/" element={<Dashboard />} />
