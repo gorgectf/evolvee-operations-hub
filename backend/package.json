@@ -1,6 +1,6 @@
 {
   "name": "operations-hub-backend",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Evolvee Radiance Operations Hub Backend",
   "main": "src/server.js",
   "type": "commonjs",
@@ -11,8 +11,7 @@
     "db:schema": "node db/applySchema.js",
     "db:seed": "node db/seed.js",
     "db:seed:admin": "node db/seedAdmin.js",
-    "db:reset": "node db/resetSchema.js",
-    "docs:versions": "node ../update-readme-versions.cjs"
+    "db:reset": "node db/resetSchema.js"
   },
   "engines": { "node": ">=20" },
   "dependencies": {

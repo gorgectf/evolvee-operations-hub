@@ -1,4 +1,4 @@
-// Centralised external API handler (spec 4.d "Shared Components").
+// Centralised external API handler.
 // All live API calls from every integration service go through callExternal()
 // so timeouts, error shaping, and sync-status recording live in one place.
 
@@ -60,7 +60,7 @@ async function callExternal(url, options = {}, config = {}) {
 }
 
 // Record the result of a sync attempt so the frontend can surface failures
-// instead of silently showing stale data (spec: Reliability requirement).
+// instead of silently showing stale data.
 async function recordSync(source, mode, ok, message = null) {
     const sql = `
         INSERT INTO sync_status (source, mode, last_run_at, last_success, ok, message)
@@ -80,4 +80,20 @@ async function recordSync(source, mode, ok, message = null) {
     }
 }
 
-module.exports = { callExternal, recordSync };
+async function withSync(source, mode, run) {
+    if (mode === 'off') {
+        await recordSync(source, 'off', true);
+        return [];
+    }
+
+    try {
+        const data = await run();
+        await recordSync(source, mode, true);
+        return data;
+    } catch (error) {
+        await recordSync(source, mode, false, error.message);
+        throw error;
+    }
+}
+
+module.exports = { callExternal, recordSync, withSync };
