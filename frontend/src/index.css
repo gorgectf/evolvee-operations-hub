@@ -336,6 +336,33 @@ label {
     padding: 12px 0;
 }
 
+.toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.toolbar .chips {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+input.search {
+    max-width: 280px;
+}
+
+th.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+
+th.sortable:hover {
+    color: var(--ink);
+}
+
 /* Login */
 .login-wrap {
     min-height: 100vh;

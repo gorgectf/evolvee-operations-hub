@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { useTableView, SortHeader, SearchBox, onEnter } from '../ui.jsx';
 
 const ROLES = ['admin', 'developer', 'ops_manager', 'marketing', 'partner'];
 
@@ -9,6 +10,7 @@ export default function Users() {
     const [users, setUsers] = useState(null);
     const [error, setError] = useState('');
     const [form, setForm] = useState(EMPTY_FORM);
+    const { query, setQuery, view, sort, toggleSort } = useTableView(users, ['full_name', 'email', 'role']);
 
     function load() {
         return api('/users')
@@ -113,18 +115,21 @@ export default function Users() {
                         placeholder="Full name"
                         value={form.full_name}
                         onChange={(e) => updateForm('full_name', e.target.value)}
+                        onKeyDown={onEnter(createUser)}
                     />
                     <input
                         placeholder="Email"
                         type="email"
                         value={form.email}
                         onChange={(e) => updateForm('email', e.target.value)}
+                        onKeyDown={onEnter(createUser)}
                     />
                     <input
                         placeholder="Password (min 8 chars)"
                         type="password"
                         value={form.password}
                         onChange={(e) => updateForm('password', e.target.value)}
+                        onKeyDown={onEnter(createUser)}
                     />
                     <select
                         value={form.role}
@@ -143,18 +148,27 @@ export default function Users() {
                 <p className="empty">Loading…</p>
             ) : (
                 <div className="tile">
+                    <div className="toolbar">
+                        <SearchBox
+                            query={query}
+                            setQuery={setQuery}
+                            placeholder="Search name, email, role…"
+                        />
+                    </div>
                     <table>
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Status</th>
+                                <SortHeader label="Name" sortKey="full_name" sort={sort} toggleSort={toggleSort} />
+                                <SortHeader label="Email" sortKey="email" sort={sort} toggleSort={toggleSort} />
+                                <SortHeader label="Role" sortKey="role" sort={sort} toggleSort={toggleSort} />
+                                <SortHeader label="Status" sortKey="is_active" sort={sort} toggleSort={toggleSort} />
                                 <th />
                             </tr>
                         </thead>
                         <tbody>
-                            {users.map(renderRow)}
+                            {view.length === 0 ? (
+                                <tr><td colSpan={5} className="empty">No users match “{query}”.</td></tr>
+                            ) : view.map(renderRow)}
                         </tbody>
                     </table>
                 </div>

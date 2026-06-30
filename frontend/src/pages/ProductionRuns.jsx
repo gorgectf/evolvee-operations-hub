@@ -1,17 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { statusPillClass, formatStatus } from '../status.js';
+import { onEnter } from '../ui.jsx';
 
 const STATUSES = ['ordered', 'in_production', 'shipped', 'received', 'cancelled'];
-
-function statusPillClass(status) {
-    if (status === 'received') return 'pill ok';
-    if (status === 'cancelled') return 'pill low';
-    return 'pill info';
-}
-
-function formatStatus(status) {
-    return status.replace('_', ' ');
-}
 
 export default function ProductionRuns() {
     const [runs, setRuns] = useState(null);
@@ -130,6 +122,7 @@ export default function ProductionRuns() {
                         placeholder="Quantity"
                         value={form.quantity}
                         onChange={(e) => updateForm('quantity', e.target.value)}
+                        onKeyDown={onEnter(create)}
                         style={{ maxWidth: 110 }}
                     />
 
@@ -137,6 +130,7 @@ export default function ProductionRuns() {
                         type="date"
                         value={form.expected_date}
                         onChange={(e) => updateForm('expected_date', e.target.value)}
+                        onKeyDown={onEnter(create)}
                         style={{ maxWidth: 160 }}
                     />
 

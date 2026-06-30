@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { useTableView, SortHeader, SearchBox, onEnter } from '../ui.jsx';
 
 const EMPTY_FORM = { sku: '', name: '', manufacturer_id: '', threshold: '' };
 
@@ -10,6 +11,7 @@ export default function Products() {
     // In-progress threshold edits, keyed by product id.
     const [edits, setEdits] = useState({});
     const [form, setForm] = useState(EMPTY_FORM);
+    const { query, setQuery, view, sort, toggleSort } = useTableView(products, ['sku', 'name', 'manufacturer_name']);
 
     function load() {
         return Promise.all([api('/products'), api('/manufacturers')])
@@ -137,11 +139,13 @@ export default function Products() {
                         placeholder="SKU or item ID (e.g. ER-SER-009)"
                         value={form.sku}
                         onChange={(e) => updateForm('sku', e.target.value)}
+                        onKeyDown={onEnter(createProduct)}
                     />
                     <input
                         placeholder="Product name"
                         value={form.name}
                         onChange={(e) => updateForm('name', e.target.value)}
+                        onKeyDown={onEnter(createProduct)}
                     />
                     <select
                         value={form.manufacturer_id}
@@ -156,6 +160,7 @@ export default function Products() {
                         placeholder="Threshold"
                         value={form.threshold}
                         onChange={(e) => updateForm('threshold', e.target.value)}
+                        onKeyDown={onEnter(createProduct)}
                         style={{ maxWidth: 120 }}
                     />
                     <button className="primary" onClick={createProduct} style={{ flex: '0 0 auto' }}>
@@ -168,18 +173,27 @@ export default function Products() {
                 <p className="empty">Loading…</p>
             ) : (
                 <div className="tile">
+                    <div className="toolbar">
+                        <SearchBox
+                            query={query}
+                            setQuery={setQuery}
+                            placeholder="Search SKU, product, manufacturer…"
+                        />
+                    </div>
                     <table>
                         <thead>
                             <tr>
-                                <th>SKU / Item ID</th>
-                                <th>Product</th>
-                                <th>Manufacturer</th>
-                                <th className="num">Reorder threshold</th>
+                                <SortHeader label="SKU / Item ID" sortKey="sku" sort={sort} toggleSort={toggleSort} />
+                                <SortHeader label="Product" sortKey="name" sort={sort} toggleSort={toggleSort} />
+                                <SortHeader label="Manufacturer" sortKey="manufacturer_name" sort={sort} toggleSort={toggleSort} />
+                                <SortHeader label="Reorder threshold" sortKey="threshold" sort={sort} toggleSort={toggleSort} className="num" />
                                 <th />
                             </tr>
                         </thead>
                         <tbody>
-                            {products.map(renderRow)}
+                            {view.length === 0 ? (
+                                <tr><td colSpan={5} className="empty">No products match “{query}”.</td></tr>
+                            ) : view.map(renderRow)}
                         </tbody>
                     </table>
                 </div>

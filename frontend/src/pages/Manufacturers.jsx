@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
+import { useTableView, SortHeader, SearchBox, onEnter } from '../ui.jsx';
 
 export default function Manufacturers() {
     const [list, setList] = useState(null);
     const [error, setError] = useState('');
     const [form, setForm] = useState({ name: '', country: '', notes: '' });
     const [adding, setAdding] = useState(false);
+    const { query, setQuery, view, sort, toggleSort } = useTableView(list, ['name', 'country', 'notes']);
 
     function load() {
         api('/manufacturers')
@@ -67,6 +69,7 @@ export default function Manufacturers() {
                         <input
                             value={form.name}
                             onChange={(e) => updateForm('name', e.target.value)}
+                            onKeyDown={onEnter(create)}
                         />
                     </div>
 
@@ -75,6 +78,7 @@ export default function Manufacturers() {
                         <input
                             value={form.country}
                             onChange={(e) => updateForm('country', e.target.value)}
+                            onKeyDown={onEnter(create)}
                         />
                     </div>
 
@@ -104,18 +108,28 @@ export default function Manufacturers() {
                 <p className="empty">Loading…</p>
             ) : (
                 <div className="tile">
+                    <div className="toolbar">
+                        <SearchBox
+                            query={query}
+                            setQuery={setQuery}
+                            placeholder="Search name, country, notes…"
+                        />
+                    </div>
                     <table>
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>Country</th>
-                                <th className="num">Products</th>
-                                <th className="num">Active runs</th>
+                                <SortHeader label="Name" sortKey="name" sort={sort} toggleSort={toggleSort} />
+                                <SortHeader label="Country" sortKey="country" sort={sort} toggleSort={toggleSort} />
+                                <SortHeader label="Products" sortKey="product_count" sort={sort} toggleSort={toggleSort} className="num" />
+                                <SortHeader label="Active runs" sortKey="active_runs" sort={sort} toggleSort={toggleSort} className="num" />
                                 <th>Notes</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {list.map(function (m) {
+                            {view.length === 0 && (
+                                <tr><td colSpan={5} className="empty">No manufacturers match “{query}”.</td></tr>
+                            )}
+                            {view.map(function (m) {
                                 return (
                                     <tr key={m.id}>
                                         <td>

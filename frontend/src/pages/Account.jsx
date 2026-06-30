@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import { api } from '../api.js';
+import { onEnter, useFlash } from '../ui.jsx';
 
 export default function Account() {
     const [current, setCurrent] = useState('');
     const [next, setNext] = useState('');
     const [confirm, setConfirm] = useState('');
     const [error, setError] = useState('');
-    const [done, setDone] = useState(false);
+    const [done, setDone] = useFlash();
 
     async function submit() {
         setError('');
-        setDone(false);
+        setDone('');
         // Confirm the new password was typed the same twice.
         if (next !== confirm) {
             setError('New passwords do not match.');
@@ -24,7 +25,7 @@ export default function Account() {
             setCurrent('');
             setNext('');
             setConfirm('');
-            setDone(true);
+            setDone('Password updated.');
         } catch (e) {
             setError(e.message);
         }
@@ -36,7 +37,7 @@ export default function Account() {
             <p className="sub">Change your password.</p>
 
             {error && <div className="banner error">{error}</div>}
-            {done && <div className="banner notice">Password updated.</div>}
+            {done && <div className="banner notice">{done}</div>}
 
             <div className="tile" style={{ maxWidth: 420 }}>
                 <h2>Change password</h2>
@@ -48,6 +49,7 @@ export default function Account() {
                         type="password"
                         value={current}
                         onChange={(e) => setCurrent(e.target.value)}
+                        onKeyDown={onEnter(submit)}
                         autoComplete="current-password"
                     />
                 </div>
@@ -59,6 +61,7 @@ export default function Account() {
                         type="password"
                         value={next}
                         onChange={(e) => setNext(e.target.value)}
+                        onKeyDown={onEnter(submit)}
                         autoComplete="new-password"
                     />
                 </div>
@@ -70,6 +73,7 @@ export default function Account() {
                         type="password"
                         value={confirm}
                         onChange={(e) => setConfirm(e.target.value)}
+                        onKeyDown={onEnter(submit)}
                         autoComplete="new-password"
                     />
                 </div>

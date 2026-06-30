@@ -1,18 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api.js';
+import { statusPillClass, formatStatus } from '../status.js';
+import { onEnter } from '../ui.jsx';
 
 const CHANNELS = ['email', 'phone', 'meeting', 'other'];
-
-function statusPillClass(status) {
-    if (status === 'received') return 'pill ok';
-    if (status === 'cancelled') return 'pill low';
-    return 'pill info';
-}
-
-function formatStatus(status) {
-    return status.replace('_', ' ');
-}
 
 export default function ManufacturerDetail() {
     const { id } = useParams();
@@ -165,11 +157,13 @@ export default function ManufacturerDetail() {
                             placeholder="Name"
                             value={contact.name}
                             onChange={(e) => updateContact('name', e.target.value)}
+                            onKeyDown={onEnter(submitContact)}
                         />
                         <input
                             placeholder="Role"
                             value={contact.role}
                             onChange={(e) => updateContact('role', e.target.value)}
+                            onKeyDown={onEnter(submitContact)}
                         />
                     </div>
 
@@ -178,11 +172,13 @@ export default function ManufacturerDetail() {
                             placeholder="Email"
                             value={contact.email}
                             onChange={(e) => updateContact('email', e.target.value)}
+                            onKeyDown={onEnter(submitContact)}
                         />
                         <input
                             placeholder="Phone"
                             value={contact.phone}
                             onChange={(e) => updateContact('phone', e.target.value)}
+                            onKeyDown={onEnter(submitContact)}
                         />
                     </div>
 
@@ -242,6 +238,7 @@ export default function ManufacturerDetail() {
                             placeholder="What was discussed or agreed"
                             value={comm.summary}
                             onChange={(e) => updateComm('summary', e.target.value)}
+                            onKeyDown={onEnter(submitComm)}
                         />
                     </div>
 
@@ -327,6 +324,7 @@ export default function ManufacturerDetail() {
                             placeholder="Quantity"
                             value={reorder.quantity_ordered}
                             onChange={(e) => updateReorder('quantity_ordered', e.target.value)}
+                            onKeyDown={onEnter(submitReorder)}
                             style={{ maxWidth: 120 }}
                         />
                     </div>

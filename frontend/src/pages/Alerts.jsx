@@ -1,21 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { useTableView, SortHeader, SearchBox, useFlash } from '../ui.jsx';
+
+const STATUS_FILTERS = [
+    { value: '', label: 'All' },
+    { value: 'open', label: 'Open' },
+    { value: 'acknowledged', label: 'Acknowledged' },
+    { value: 'resolved', label: 'Resolved' },
+];
 
 export default function Alerts() {
     const [alerts, setAlerts] = useState(null);
     const [error, setError] = useState('');
-    const [notice, setNotice] = useState('');
+    const [notice, setNotice] = useFlash(5000);
     const [checking, setChecking] = useState(false);
+    const [filter, setFilter] = useState('');
+    const { query, setQuery, view, sort, toggleSort } = useTableView(alerts, ['sku', 'product_name', 'manufacturer']);
 
     function load() {
-        api('/alerts')
+        api(`/alerts${filter ? `?status=${filter}` : ''}`)
             .then((data) => setAlerts(data.alerts))
             .catch((e) => setError(e.message));
     }
 
     useEffect(() => {
         load();
-    }, []);
+    }, [filter]);
 
     async function setStatus(id, status) {
         try {
@@ -91,33 +101,48 @@ export default function Alerts() {
                 </button>
             </p>
 
-            {alerts === null && <p className="empty">Loading…</p>}
-
-            {alerts !== null && alerts.length === 0 && (
-                <div className="tile">
-                    <p className="empty">
-                        No alerts. Every SKU / item ID is above its reorder threshold.
-                    </p>
+            <div className="toolbar">
+                <SearchBox
+                    query={query}
+                    setQuery={setQuery}
+                    placeholder="Search SKU, product, manufacturer…"
+                />
+                <div className="chips">
+                    {STATUS_FILTERS.map((f) => (
+                        <button
+                            key={f.value}
+                            className={filter === f.value ? 'primary' : ''}
+                            onClick={() => setFilter(f.value)}
+                        >
+                            {f.label}
+                        </button>
+                    ))}
                 </div>
-            )}
+            </div>
 
-            {alerts !== null && alerts.length > 0 && (
+            {alerts === null ? (
+                <p className="empty">Loading…</p>
+            ) : (
                 <div className="tile">
                     <table>
                         <thead>
                             <tr>
-                                <th>Raised</th>
-                                <th>SKU / Item ID</th>
-                                <th>Product</th>
-                                <th className="num">Stock</th>
-                                <th className="num">Threshold</th>
-                                <th>Manufacturer</th>
-                                <th>Status</th>
+                                <SortHeader label="Raised" sortKey="triggered_at" sort={sort} toggleSort={toggleSort} />
+                                <SortHeader label="SKU / Item ID" sortKey="sku" sort={sort} toggleSort={toggleSort} />
+                                <SortHeader label="Product" sortKey="product_name" sort={sort} toggleSort={toggleSort} />
+                                <SortHeader label="Stock" sortKey="stock_level" sort={sort} toggleSort={toggleSort} className="num" />
+                                <SortHeader label="Threshold" sortKey="threshold" sort={sort} toggleSort={toggleSort} className="num" />
+                                <SortHeader label="Manufacturer" sortKey="manufacturer" sort={sort} toggleSort={toggleSort} />
+                                <SortHeader label="Status" sortKey="status" sort={sort} toggleSort={toggleSort} />
                                 <th />
                             </tr>
                         </thead>
                         <tbody>
-                            {alerts.map((alert) => (
+                            {view.length === 0 ? (
+                                <tr><td colSpan={8} className="empty">
+                                    {query ? `No alerts match “${query}”.` : 'No alerts for this filter.'}
+                                </td></tr>
+                            ) : view.map((alert) => (
                                 <tr key={alert.id}>
                                     <td>{formatDate(alert.triggered_at)}</td>
                                     <td>{alert.sku}</td>
