@@ -8,7 +8,39 @@ const { asyncRoute } = require('../middleware/errorHandler');
 
 const router = express.Router();
 
-router.post('/login', asyncRoute(async (req, res) => {
+const DUMMY_HASH = bcrypt.hashSync('unused-timing-equaliser', 10);
+
+const loginAttempts = new Map();
+function rateLimit(req, res, next) {
+    const windowMs = 15 * 60 * 1000;
+    const max = 10;
+    const now = Date.now();
+
+    if (loginAttempts.size > 5000) {
+        for (const [k, v] of loginAttempts) {
+            if (now - v.start > windowMs) {
+                loginAttempts.delete(k);
+            }
+        }
+    }
+
+    const email = req.body && req.body.email ? String(req.body.email).toLowerCase().trim() : '';
+    const key = req.ip + '|' + email;
+    const rec = loginAttempts.get(key);
+
+    if (!rec || now - rec.start > windowMs) {
+        loginAttempts.set(key, { start: now, count: 1 });
+        return next();
+    }
+
+    rec.count += 1;
+    if (rec.count > max) {
+        return res.status(429).json({ error: 'Too many attempts. Please wait and try again.' });
+    }
+    next();
+}
+
+router.post('/login', rateLimit, asyncRoute(async (req, res) => {
     const body = req.body || {};
     const email = body.email;
     const password = body.password;
@@ -26,6 +58,7 @@ router.post('/login', asyncRoute(async (req, res) => {
     // Same message for unknown email and wrong password.
     const user = result.rows[0];
     if (!user) {
+        bcrypt.compareSync(password, DUMMY_HASH);
         return res.status(401).json({ error: 'Incorrect email or password.' });
     }
 
@@ -71,7 +104,7 @@ router.get('/me', authenticate, (req, res) => {
     res.json({ user: user });
 });
 
-router.post('/password', authenticate, asyncRoute(async (req, res) => {
+router.post('/password', rateLimit, authenticate, asyncRoute(async (req, res) => {
     const body = req.body || {};
     const currentPassword = body.current_password;
     const newPassword = body.new_password;

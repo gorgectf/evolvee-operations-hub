@@ -8,6 +8,7 @@ const { seed } = require('../db/seed');
 const { seedAdmin } = require('../db/seedAdmin');
 
 const app = express();
+app.set('trust proxy', 1);
 
 function isAllowedOrigin(origin, callback) {
     // No Origin header (same-origin or server-to-server): allow.

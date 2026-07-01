@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const env = require('../config/env');
+const { query } = require('../config/db');
 
 // Permission model:
 //   admin        - everything, including user management
@@ -23,7 +24,7 @@ function extractBearerToken(authorizationHeader) {
     return authorizationHeader.slice(7);
 }
 
-function authenticate(req, res, next) {
+async function authenticate(req, res, next) {
     const authorizationHeader = req.headers.authorization || '';
     const token = extractBearerToken(authorizationHeader);
 
@@ -31,12 +32,26 @@ function authenticate(req, res, next) {
         return res.status(401).json({ error: 'Not logged in. Please sign in.' });
     }
 
+    let payload;
     try {
-        const payload = jwt.verify(token, env.jwtSecret);
-        req.user = payload; // { id, email, role, name }
-        next();
+        payload = jwt.verify(token, env.jwtSecret);
     } catch {
         return res.status(401).json({ error: 'Session expired or invalid. Please sign in again.' });
+    }
+
+    try {
+        const result = await query(
+            'SELECT id, email, full_name, role, is_active FROM users WHERE id = $1',
+            [payload.id]
+        );
+        const user = result.rows[0];
+        if (!user || !user.is_active) {
+            return res.status(401).json({ error: 'Session expired or invalid. Please sign in again.' });
+        }
+        req.user = { id: user.id, email: user.email, role: user.role, name: user.full_name };
+        next();
+    } catch (err) {
+        next(err);
     }
 }
 

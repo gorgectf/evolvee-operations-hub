@@ -6,8 +6,8 @@ types.setTypeParser(1082, (value) => value);
 
 function databaseSsl() {
   const override = (env.databaseSsl || '').trim().toLowerCase();
-  if (override === 'true') return { rejectUnauthorized: false };
   if (override === 'false') return false;
+  if (override === 'no-verify') return { rejectUnauthorized: false };
 
   let host = '';
   try {
@@ -16,7 +16,10 @@ function databaseSsl() {
     host = '';
   }
   const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1';
-  return isLocal ? false : { rejectUnauthorized: false };
+  if (override === '' && isLocal) return false;
+
+  const ca = (env.databaseCaCert || '').replace(/\\n/g, '\n').trim();
+  return ca ? { rejectUnauthorized: true, ca } : { rejectUnauthorized: true };
 }
 
 const pool = new Pool({

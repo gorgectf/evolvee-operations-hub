@@ -62,6 +62,7 @@ const env = {
     isProduction: isProduction,
     databaseUrl: required('DATABASE_URL'),
     databaseSsl: envOr('DATABASE_SSL', ''),
+    databaseCaCert: envOr('DATABASE_CA_CERT', ''),
     jwtSecret: requiredJwtSecret(),
     jwtExpiresIn: envOr('JWT_EXPIRES_IN', '8h'),
     corsOrigins: parseCorsOrigins(),
