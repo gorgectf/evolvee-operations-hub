@@ -23,3 +23,18 @@ export function selectRows(rows, searchFields, query, sort) {
 
     return view;
 }
+
+export function toCsv(columns, rows) {
+    const cell = (value) => {
+        const s = value == null ? '' : String(value);
+
+        return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+
+    const lines = [columns.map((c) => cell(c.label)).join(',')];
+    for (const row of rows || []) {
+        lines.push(columns.map((c) => cell(c.get(row))).join(','));
+    }
+    
+    return lines.join('\n');
+}

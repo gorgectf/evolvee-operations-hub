@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { selectRows } from './tableView.js';
+import { selectRows, toCsv } from './tableView.js';
 
 export function useTableView(rows, searchFields) {
     const [query, setQuery] = useState('');
@@ -38,6 +38,43 @@ export function SearchBox({ query, setQuery, placeholder }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
         />
+    );
+}
+
+export function ExportButton({ filename, columns, rows, label }) {
+    function download() {
+        const csv = toCsv(columns, rows);
+        const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+        const link = document.createElement('a');
+        
+        link.href = url;
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(url);
+    }
+
+    return (
+        <button className="link" onClick={download} disabled={!rows || rows.length === 0}>
+            {label || 'Export CSV'}
+        </button>
+    );
+}
+
+export function CopyText({ value }) {
+    const [copied, setCopied] = useState(false);
+
+    function copy() {
+        if (!navigator.clipboard) return;
+        navigator.clipboard.writeText(value).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1200);
+        });
+    }
+
+    return (
+        <button className="link copy" onClick={copy} title="Copy to clipboard">
+            {value}{copied ? ' ✓' : ''}
+        </button>
     );
 }
 

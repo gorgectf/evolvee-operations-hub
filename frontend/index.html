@@ -4,14 +4,10 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Evolvée Radiance - Operations Hub</title>
-
         <script>
-            (function () {
-                var t = localStorage.getItem('theme');
-                if (!t) t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                
-                document.documentElement.dataset.theme = t;
-            })();
+            // Set theme before paint to avoid a flash. ponytail: inline, no lib.
+            document.documentElement.dataset.theme = localStorage.getItem('theme') ||
+                (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
         </script>
     </head>
     

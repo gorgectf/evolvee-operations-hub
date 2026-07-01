@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, getUser } from '../api.js';
+import { useTableView, SortHeader, ExportButton, CopyText } from '../ui.jsx';
 import {
     ResponsiveContainer,
     LineChart,
@@ -80,8 +81,55 @@ function stockPill(isLowStock) {
 function shippingStatusClass(status) {
     if (status === 'Delivered') return 'ok';
     if (status === 'Exception') return 'low';
-    
+
     return 'info';
+}
+
+function DataTable({ columns, rows, filename, limit, copyKey, keyField = 'id' }) {
+    const { view, sort, toggleSort } = useTableView(rows, []);
+    const shown = limit ? view.slice(0, limit) : view;
+    const csvColumns = columns.map((c) => ({ label: c.label, get: (row) => row[c.key] }));
+
+    return (
+        <>
+            <div className="toolbar" style={{ justifyContent: 'flex-end', marginBottom: 8 }}>
+                <ExportButton filename={filename} columns={csvColumns} rows={view} />
+            </div>
+            <div className="table-scroll">
+                <table>
+                    <thead>
+                        <tr>
+                            {columns.map((c) => (
+                                <SortHeader
+                                    key={c.key}
+                                    label={c.label}
+                                    sortKey={c.key}
+                                    sort={sort}
+                                    toggleSort={toggleSort}
+                                    className={c.num ? 'num' : undefined}
+                                />
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {shown.map((row, i) => (
+                            <tr key={row[keyField] ?? row[copyKey] ?? i}>
+                                {columns.map((c) => (
+                                    <td key={c.key} className={c.num ? 'num' : undefined}>
+                                        {c.key === copyKey
+                                            ? <CopyText value={row[c.key]} />
+                                            : c.render
+                                                ? c.render(row)
+                                                : row[c.key]}
+                                    </td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </>
+    );
 }
 
 export default function Dashboard() {
@@ -139,30 +187,19 @@ export default function Dashboard() {
                                                 <div className="l">SKUs / item IDs need reordering</div>
                                             </div>
                                         </div>
-                                        <div className="table-scroll">
-                                            <table>
-                                                <thead>
-                                                    <tr>
-                                                        <th>SKU / Item ID</th>
-                                                        <th>Product</th>
-                                                        <th className="num">Stock</th>
-                                                        <th className="num">Threshold</th>
-                                                        <th>Manufacturer</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {data.open_alerts.slice(0, 5).map((alert) => (
-                                                        <tr key={alert.id}>
-                                                            <td>{alert.sku}</td>
-                                                            <td>{alert.name}</td>
-                                                            <td className="num">{alert.stock_level}</td>
-                                                            <td className="num">{alert.threshold}</td>
-                                                            <td>{alert.manufacturer || '—'}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                        <DataTable
+                                            rows={data.open_alerts}
+                                            filename="reorder-alerts.csv"
+                                            limit={5}
+                                            copyKey="sku"
+                                            columns={[
+                                                { label: 'SKU / Item ID', key: 'sku' },
+                                                { label: 'Product', key: 'name' },
+                                                { label: 'Stock', key: 'stock_level', num: true },
+                                                { label: 'Threshold', key: 'threshold', num: true },
+                                                { label: 'Manufacturer', key: 'manufacturer', render: (a) => a.manufacturer || '—' },
+                                            ]}
+                                        />
                                         <p style={{ marginBottom: 0 }}>
                                             <Link to="/alerts">Manage alerts →</Link>
                                         </p>
@@ -177,28 +214,18 @@ export default function Dashboard() {
                     <Tile title="Stock levels" source="Shopify">
                         <Body state={inventory}>
                             {(data) => (
-                                <div className="table-scroll">
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>SKU / Item ID</th>
-                                                <th>Product</th>
-                                                <th className="num">On hand</th>
-                                                <th>Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {data.items.map((item) => (
-                                                <tr key={item.sku}>
-                                                    <td>{item.sku}</td>
-                                                    <td>{item.name}</td>
-                                                    <td className="num">{item.stock_on_hand}</td>
-                                                    <td>{stockPill(item.low_stock)}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                <DataTable
+                                    rows={data.items}
+                                    filename="stock-levels.csv"
+                                    copyKey="sku"
+                                    keyField="sku"
+                                    columns={[
+                                        { label: 'SKU / Item ID', key: 'sku' },
+                                        { label: 'Product', key: 'name' },
+                                        { label: 'On hand', key: 'stock_on_hand', num: true },
+                                        { label: 'Status', key: 'low_stock', render: (item) => stockPill(item.low_stock) },
+                                    ]}
+                                />
                             )}
                         </Body>
                     </Tile>
@@ -209,6 +236,16 @@ export default function Dashboard() {
                         <Body state={sales}>
                             {(data) => (
                                 <>
+                                    <div className="toolbar" style={{ justifyContent: 'flex-end', marginBottom: 8 }}>
+                                        <ExportButton
+                                            filename="product-sales.csv"
+                                            rows={data.products}
+                                            columns={[
+                                                { label: 'SKU', get: (p) => p.sku },
+                                                { label: 'Units sold (30d)', get: (p) => p.units_sold_30d },
+                                            ]}
+                                        />
+                                    </div>
                                     <ResponsiveContainer width="100%" height={180}>
                                         <BarChart
                                             data={data.products}
@@ -253,28 +290,17 @@ export default function Dashboard() {
                     <Tile title="Top customers" source="Shopify + Zoho CRM">
                         <Body state={customers}>
                             {(data) => (
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Customer</th>
-                                            <th>Segment</th>
-                                            <th className="num">Orders</th>
-                                            <th className="num">Total spent</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {data.customers.slice(0, 6).map((customer) => (
-                                            <tr key={customer.id}>
-                                                <td>{customer.name}</td>
-                                                <td>
-                                                    <span className="pill info">{customer.segment}</span>
-                                                </td>
-                                                <td className="num">{customer.orders_count}</td>
-                                                <td className="num">{formatGBP(customer.total_spent)}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                <DataTable
+                                    rows={data.customers}
+                                    filename="top-customers.csv"
+                                    limit={6}
+                                    columns={[
+                                        { label: 'Customer', key: 'name' },
+                                        { label: 'Segment', key: 'segment', render: (c) => <span className="pill info">{c.segment}</span> },
+                                        { label: 'Orders', key: 'orders_count', num: true },
+                                        { label: 'Total spent', key: 'total_spent', num: true, render: (c) => formatGBP(c.total_spent) },
+                                    ]}
+                                />
                             )}
                         </Body>
                     </Tile>
@@ -292,30 +318,17 @@ export default function Dashboard() {
                                             {data.exceptions.map((exception) => exception.order_id).join(', ')}
                                         </div>
                                     )}
-                                    <table>
-                                        <thead>
-                                            <tr>
-                                                <th>Order</th>
-                                                <th>Customer</th>
-                                                <th>Courier</th>
-                                                <th>Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {data.trackings.map((tracking) => (
-                                                <tr key={tracking.tracking_number}>
-                                                    <td>{tracking.order_id}</td>
-                                                    <td>{tracking.customer}</td>
-                                                    <td>{tracking.courier}</td>
-                                                    <td>
-                                                        <span className={`pill ${shippingStatusClass(tracking.status)}`}>
-                                                            {tracking.status}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
+                                    <DataTable
+                                        rows={data.trackings}
+                                        filename="orders-in-transit.csv"
+                                        keyField="tracking_number"
+                                        columns={[
+                                            { label: 'Order', key: 'order_id' },
+                                            { label: 'Customer', key: 'customer' },
+                                            { label: 'Courier', key: 'courier' },
+                                            { label: 'Status', key: 'status', render: (t) => <span className={`pill ${shippingStatusClass(t.status)}`}>{t.status}</span> },
+                                        ]}
+                                    />
                                 </>
                             )}
                         </Body>

@@ -29,6 +29,7 @@
     --bad: #d97a7a;
 }
 
+/* A few base styles hardcode light colors — retint them for dark. */
 [data-theme="dark"] td {
     border-bottom-color: var(--line);
 }
@@ -316,6 +317,18 @@ button.link {
     background: none;
     color: var(--accent-deep);
     padding: 2px 4px;
+}
+
+button.link.copy {
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    white-space: nowrap;
+}
+
+button.link.copy:hover {
+    color: var(--accent-deep);
+    text-decoration: underline;
 }
 
 input,
