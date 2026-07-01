@@ -11,6 +11,25 @@ import ProductionRuns from './pages/ProductionRuns.jsx';
 import Users from './pages/Users.jsx';
 import Account from './pages/Account.jsx';
 
+// Flips <html data-theme> and remembers the choice. Initial theme is set
+// pre-paint by an inline script in index.html.
+function ThemeToggle() {
+    const [dark, setDark] = React.useState(
+        () => document.documentElement.dataset.theme === 'dark'
+    );
+    const toggle = () => {
+        const next = dark ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        localStorage.setItem('theme', next);
+        setDark(!dark);
+    };
+    return (
+        <button className="link" onClick={toggle} aria-pressed={dark} title="Toggle dark mode">
+            {dark ? '☀ Light' : '☾ Dark'}
+        </button>
+    );
+}
+
 // App frame: top nav plus the active route.
 function Shell() {
     const user = getUser();
@@ -66,6 +85,7 @@ function Shell() {
                             {user?.name} · {user?.role?.replace('_', ' ')}
                         </span>
                         <NavLink to="/account">Account</NavLink>
+                        <ThemeToggle />
                         <button
                             onClick={() => {
                                 clearSession();

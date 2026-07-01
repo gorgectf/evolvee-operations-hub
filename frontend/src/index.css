@@ -15,6 +15,55 @@
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
+/* Dark mode */
+[data-theme="dark"] {
+    --bg: #17140f;
+    --surface: #201c16;
+    --ink: #ece7de;
+    --muted: #9a9082;
+    --line: #37312a;
+    --accent: #c9a765;
+    --accent-deep: #d8bc82;
+    --good: #6bbd90;
+    --warn: #d98a5f;
+    --bad: #d97a7a;
+}
+
+[data-theme="dark"] td {
+    border-bottom-color: var(--line);
+}
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+    background: var(--surface);
+}
+[data-theme="dark"] button.primary {
+    background: var(--accent);
+    color: #17140f;
+    border-color: var(--accent);
+}
+[data-theme="dark"] button.primary:hover {
+    background: var(--accent-deep);
+}
+[data-theme="dark"] .tile:hover {
+    border-color: #4a4136;
+}
+[data-theme="dark"] .pill.low,
+[data-theme="dark"] .banner.error {
+    background: color-mix(in srgb, var(--bad) 24%, transparent);
+}
+[data-theme="dark"] .pill.ok {
+    background: color-mix(in srgb, var(--good) 24%, transparent);
+}
+[data-theme="dark"] .pill.warn {
+    background: color-mix(in srgb, var(--warn) 24%, transparent);
+}
+[data-theme="dark"] .pill.info,
+[data-theme="dark"] .banner.notice,
+[data-theme="dark"] nav.main a.active {
+    background: color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
 * {
     box-sizing: border-box;
 }
