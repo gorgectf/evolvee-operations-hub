@@ -11,8 +11,6 @@ import ProductionRuns from './pages/ProductionRuns.jsx';
 import Users from './pages/Users.jsx';
 import Account from './pages/Account.jsx';
 
-// Flips <html data-theme> and remembers the choice. Initial theme is set
-// pre-paint by an inline script in index.html.
 function ThemeToggle() {
     const [dark, setDark] = React.useState(
         () => document.documentElement.dataset.theme === 'dark'
