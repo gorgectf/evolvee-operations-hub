@@ -10,18 +10,20 @@ async function getZohoAccessToken() {
         return cached.token;
     }
 
-    const refreshToken = encodeURIComponent(env.zoho.refreshToken);
-    const clientId = encodeURIComponent(env.zoho.clientId);
-    const clientSecret = encodeURIComponent(env.zoho.clientSecret);
+    const params = new URLSearchParams({
+        refresh_token: env.zoho.refreshToken,
+        client_id: env.zoho.clientId,
+        client_secret: env.zoho.clientSecret,
+        grant_type: 'refresh_token'
+    });
 
-    const url =
-        env.zoho.accountsBase + '/oauth/v2/token' +
-        '?refresh_token=' + refreshToken +
-        '&client_id=' + clientId +
-        '&client_secret=' + clientSecret +
-        '&grant_type=refresh_token';
+    const url = env.zoho.accountsBase + '/oauth/v2/token';
 
-    const data = await callExternal(url, { method: 'POST' });
+    const data = await callExternal(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: params.toString()
+    });
 
     if (!data.access_token) {
         throw new Error('Zoho token refresh failed — check ZOHO_* values in .env');
