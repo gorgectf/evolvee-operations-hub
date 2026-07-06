@@ -49,7 +49,10 @@ router.get('/inventory', requirePermission('inventory'), asyncRoute(async (req, 
 }));
 
 router.get('/sales', requirePermission('sales'), asyncRoute(async (req, res) => {
-    const products = await shopify.getSalesOverview();
+    const [products, today] = await Promise.all([
+        shopify.getSalesOverview(),
+        shopify.getTodayOrders()
+    ]);
 
     const sorted = products.slice();
     sorted.sort(function (a, b) {
@@ -64,7 +67,9 @@ router.get('/sales', requirePermission('sales'), asyncRoute(async (req, res) => 
     res.json({
         products: sorted,
         best_sellers: bestSellers,
-        slow_movers: slowMovers
+        slow_movers: slowMovers,
+        orders_today: today.orders_count,
+        sales_today: today.sales_total
     });
 }));
 

@@ -198,6 +198,7 @@ async function getStockLevels() {
                     sku: sku,
                     inventory_item_id: v.inventory_item_id ? String(v.inventory_item_id) : null,
                     name: variantName,
+                    price: Number(v.price || 0),
                     stock_on_hand: 0,
                     reorder_level: 0
                 };
@@ -229,6 +230,38 @@ async function getStockLevels() {
         }
 
         return Object.values(bySku);
+    });
+}
+
+async function getTodayOrders() {
+    const mode = env.modes.shopify;
+
+    return withSync('shopify', mode, async () => {
+        if (mode === 'sample') {
+            return sample.orders_today;
+        }
+
+        const startOfToday = new Date();
+        startOfToday.setUTCHours(0, 0, 0, 0);
+
+        const url =
+            base() +
+            '/orders.json?status=any' +
+            '&created_at_min=' + startOfToday.toISOString() +
+            '&limit=250' +
+            '&fields=total_price';
+
+        const orders = await fetchAllPages(url, 'orders');
+
+        let salesTotal = 0;
+        for (const o of orders) {
+            salesTotal += Number(o.total_price);
+        }
+
+        return {
+            orders_count: orders.length,
+            sales_total: Number(salesTotal.toFixed(2))
+        };
     });
 }
 
@@ -274,4 +307,4 @@ async function getMonthlyRevenue() {
     });
 }
 
-module.exports = { getSalesOverview, getTopCustomers, getDailyRevenue, getStockLevels, getMonthlyRevenue };
+module.exports = { getSalesOverview, getTopCustomers, getDailyRevenue, getStockLevels, getMonthlyRevenue, getTodayOrders };

@@ -21,6 +21,104 @@ function formatGBP(amount) {
     });
 }
 
+function sumBy(list, key) {
+    return (list || []).reduce((acc, item) => acc + Number(item[key] || 0), 0);
+}
+
+function formatCount(value) {
+    return Number(value || 0).toLocaleString('en-GB');
+}
+
+function ExecKpiCards({ inventory, sales, revenue, shipping, alerts }) {
+    const cards = [];
+
+    if (revenue.data) {
+        cards.push({
+            key: 'revenue',
+            label: 'Revenue — this month',
+            value: formatGBP(sumBy(revenue.data.daily, 'revenue')),
+        });
+    }
+
+    if (sales.data) {
+        cards.push({
+            key: 'sales-today',
+            label: "Today's sales",
+            value: formatGBP(sales.data.sales_today || 0),
+        });
+        cards.push({
+            key: 'orders-today',
+            label: 'Orders today',
+            value: formatCount(sales.data.orders_today),
+        });
+        cards.push({
+            key: 'sales-revenue',
+            label: 'Sales — last 30 days',
+            value: formatGBP(sumBy(sales.data.products, 'revenue_30d')),
+        });
+        cards.push({
+            key: 'units',
+            label: 'Units sold — 30 days',
+            value: formatCount(sumBy(sales.data.products, 'units_sold_30d')),
+        });
+    }
+
+    if (inventory.data) {
+        const inventoryValue = (inventory.data.items || []).reduce(
+            (acc, item) => acc + Number(item.price || 0) * Number(item.stock_on_hand || 0),
+            0,
+        );
+        cards.push({
+            key: 'inventory-value',
+            label: 'Inventory value',
+            value: formatGBP(inventoryValue),
+        });
+        cards.push({
+            key: 'stock',
+            label: 'Units in stock',
+            value: formatCount(sumBy(inventory.data.items, 'stock_on_hand')),
+        });
+        cards.push({
+            key: 'low-stock',
+            label: 'Low stock SKUs',
+            value: formatCount(inventory.data.low_count),
+            bad: inventory.data.low_count > 0,
+        });
+    }
+
+    if (shipping.data) {
+        const pending = (shipping.data.trackings || []).filter((t) => t.status !== 'Delivered').length;
+        cards.push({
+            key: 'pending',
+            label: 'Pending shipments',
+            value: formatCount(pending),
+            bad: (shipping.data.exceptions || []).length > 0,
+        });
+    }
+
+    if (alerts.data) {
+        cards.push({
+            key: 'alerts',
+            label: 'Open reorder alerts',
+            value: formatCount(alerts.data.open_count),
+            bad: alerts.data.open_count > 0,
+        });
+    }
+
+    if (cards.length === 0) return null;
+
+    return (
+        <div className="kpi-strip">
+            {cards.map((c) => (
+                <div className="kpi kpi-card" key={c.key}>
+                    <div className="v" style={c.bad ? { color: 'var(--bad)' } : undefined}>{c.value}</div>
+                    <div className="l">{c.label}</div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 function Tile({ title, source, wide, children }) {
     return (
         <section className={`tile${wide ? ' wide' : ''}`}>
@@ -164,6 +262,14 @@ export default function Dashboard() {
                     be showing older data: {failedSources.map((source) => source.source).join(', ')}.
                 </div>
             )}
+
+            <ExecKpiCards
+                inventory={inventory}
+                sales={sales}
+                revenue={revenue}
+                shipping={shipping}
+                alerts={alerts}
+            />
 
             <div className="grid">
                 {canAccess('alerts') && (
