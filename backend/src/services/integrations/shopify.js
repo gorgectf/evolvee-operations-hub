@@ -1,5 +1,6 @@
 const env = require('../../config/env');
 const { callExternal, withSync } = require('../apiClient');
+const { aggregateCustomerPurchases } = require('../customerPurchases');
 const sample = require('../sampleData/shopify.json');
 
 function headers() {
@@ -92,6 +93,30 @@ async function getSalesOverview() {
         }
 
         return Object.values(bySku);
+    });
+}
+
+async function getCustomerPurchases() {
+    const mode = env.modes.shopify;
+
+    return withSync('shopify', mode, async () => {
+        if (mode === 'sample') {
+            return sample.customer_purchases;
+        }
+
+        const thirtyDaysMs = 30 * 864e5;
+        const since = new Date(Date.now() - thirtyDaysMs).toISOString();
+
+        const url =
+            base() +
+            '/orders.json?status=any' +
+            '&created_at_min=' + since +
+            '&limit=250' +
+            '&fields=name,created_at,total_price,customer,line_items';
+
+        const orders = await fetchAllPages(url, 'orders');
+
+        return aggregateCustomerPurchases(orders);
     });
 }
 
@@ -307,4 +332,4 @@ async function getMonthlyRevenue() {
     });
 }
 
-module.exports = { getSalesOverview, getTopCustomers, getDailyRevenue, getStockLevels, getMonthlyRevenue, getTodayOrders };
+module.exports = { getSalesOverview, getTopCustomers, getCustomerPurchases, getDailyRevenue, getStockLevels, getMonthlyRevenue, getTodayOrders };

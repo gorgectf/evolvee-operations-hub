@@ -24,6 +24,7 @@ router.post('/', asyncRoute(async (req, res) => {
     const name = body.name;
     const manufacturerId = body.manufacturer_id;
     const threshold = body.threshold;
+    const unitCost = body.unit_cost;
 
     if (!sku || !name) {
         return res.status(400).json({ error: 'sku and name are required.' });
@@ -38,13 +39,22 @@ router.post('/', asyncRoute(async (req, res) => {
         thresholdValue = n;
     }
 
+    let unitCostValue = null;
+    if (unitCost !== undefined && unitCost !== null && unitCost !== '') {
+        const c = Number(unitCost);
+        if (!Number.isFinite(c) || c < 0) {
+            return res.status(400).json({ error: 'unit_cost must be a number of 0 or more.' });
+        }
+        unitCostValue = c;
+    }
+
     const manufacturerIdValue = manufacturerId || null;
 
     const insertProductSql =
-        'INSERT INTO products (sku, name, manufacturer_id) ' +
-        'VALUES ($1, $2, $3) RETURNING *';
+        'INSERT INTO products (sku, name, manufacturer_id, unit_cost) ' +
+        'VALUES ($1, $2, $3, $4) RETURNING *';
 
-    const productResult = await query(insertProductSql, [sku.trim(), name, manufacturerIdValue]);
+    const productResult = await query(insertProductSql, [sku.trim(), name, manufacturerIdValue, unitCostValue]);
     const product = productResult.rows[0];
 
     if (thresholdValue !== null) {
@@ -95,6 +105,26 @@ router.put('/:id/threshold', asyncRoute(async (req, res) => {
 
     const result = await query(sql, [productId, threshold]);
     res.json({ threshold: result.rows[0] });
+}));
+
+router.put('/:id/cost', asyncRoute(async (req, res) => {
+    const body = req.body || {};
+
+    const unitCost = Number(body.unit_cost);
+    if (!Number.isFinite(unitCost) || unitCost < 0) {
+        return res.status(400).json({ error: 'unit_cost must be a number of 0 or more.' });
+    }
+
+    const id = Number(req.params.id);
+    const result = await query(
+        'UPDATE products SET unit_cost = $1 WHERE id = $2 RETURNING *',
+        [unitCost, id]
+    );
+
+    if (!result.rows[0]) {
+        return res.status(404).json({ error: 'Product not found.' });
+    }
+    res.json({ product: result.rows[0] });
 }));
 
 module.exports = router;

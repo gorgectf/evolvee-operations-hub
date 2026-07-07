@@ -239,6 +239,7 @@ export default function Dashboard() {
 
     const inventory = useModule('/dashboard/inventory', canAccess('inventory'));
     const sales = useModule('/dashboard/sales', canAccess('sales'));
+    const productPerf = useModule('/dashboard/product-performance', canAccess('sales'));
     const customers = useModule('/dashboard/customers', canAccess('customers'));
     const revenue = useModule('/dashboard/revenue', canAccess('revenue'));
     const shipping = useModule('/dashboard/shipping', canAccess('shipping'));
@@ -392,6 +393,30 @@ export default function Dashboard() {
                     </Tile>
                 )}
 
+                {canAccess('sales') && (
+                    <Tile title="Product performance — last 30 days" source="Shopify" wide>
+                        <Body state={productPerf}>
+                            {(data) => (
+                                <DataTable
+                                    rows={data.products}
+                                    filename="product-performance.csv"
+                                    keyField="sku"
+                                    copyKey="sku"
+                                    columns={[
+                                        { label: 'SKU', key: 'sku' },
+                                        { label: 'Product', key: 'title' },
+                                        { label: 'Units (30d)', key: 'units_sold_30d', num: true },
+                                        { label: 'Revenue (30d)', key: 'revenue_30d', num: true, render: (p) => formatGBP(p.revenue_30d) },
+                                        { label: 'Margin %', key: 'margin_pct', num: true, render: (p) => (p.margin_pct != null ? `${p.margin_pct}%` : '—') },
+                                        { label: 'Turnover', key: 'turnover', num: true, render: (p) => (p.turnover != null ? p.turnover : '—') },
+                                        { label: 'Sell-through %', key: 'sell_through', num: true, render: (p) => (p.sell_through != null ? `${p.sell_through}%` : '—') },
+                                    ]}
+                                />
+                            )}
+                        </Body>
+                    </Tile>
+                )}
+
                 {canAccess('customers') && (
                     <Tile title="Top customers" source="Shopify + Zoho CRM">
                         <Body state={customers}>
@@ -404,7 +429,22 @@ export default function Dashboard() {
                                         { label: 'Customer', key: 'name' },
                                         { label: 'Segment', key: 'segment', render: (c) => <span className="pill info">{c.segment}</span> },
                                         { label: 'Orders', key: 'orders_count', num: true },
-                                        { label: 'Total spent', key: 'total_spent', num: true, render: (c) => formatGBP(c.total_spent) },
+                                        { label: 'Total spent (LTV)', key: 'total_spent', num: true, render: (c) => formatGBP(c.total_spent) },
+                                        { label: 'Avg order', key: 'avg_order', num: true, render: (c) => formatGBP(c.orders_count > 0 ? c.total_spent / c.orders_count : 0) },
+                                        { label: 'Returning', key: 'returning', render: (c) => <span className={`pill ${c.orders_count > 1 ? 'ok' : 'info'}`}>{c.orders_count > 1 ? 'Returning' : 'New'}</span> },
+                                        { label: 'Favorite', key: 'favorite_title', render: (c) => c.favorite_title ? `${c.favorite_title} (${c.favorite_units})` : '—' },
+                                        { label: 'History', key: 'history', render: (c) => (c.history && c.history.length) ? (
+                                            <details>
+                                                <summary>{c.history.length} order{c.history.length === 1 ? '' : 's'}</summary>
+                                                <ul style={{ margin: '6px 0 0', paddingLeft: 16 }}>
+                                                    {c.history.map((h, i) => (
+                                                        <li key={i} style={{ fontSize: 12 }}>
+                                                            {h.date} · {h.order} · {formatGBP(h.total)}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </details>
+                                        ) : '—' },
                                     ]}
                                 />
                             )}

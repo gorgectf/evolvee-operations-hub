@@ -13,7 +13,10 @@ router.get('/', asyncRoute(async (req, res) => {
         '     WHERE p.manufacturer_id = m.id) AS product_count, ' +
         '    (SELECT COUNT(*)::int FROM production_runs pr ' +
         '     WHERE pr.manufacturer_id = m.id ' +
-        "       AND pr.status IN ('ordered', 'in_production', 'shipped')) AS active_runs " +
+        "       AND pr.status IN ('ordered', 'in_production', 'shipped')) AS active_runs, " +
+        '    (SELECT ROUND(AVG(EXTRACT(EPOCH FROM (pr.updated_at - pr.created_at)) / 86400.0)::numeric, 1) ' +
+        '     FROM production_runs pr ' +
+        "     WHERE pr.manufacturer_id = m.id AND pr.status = 'received') AS avg_production_days " +
         'FROM manufacturers m ' +
         'ORDER BY m.name';
 
@@ -25,7 +28,11 @@ router.get('/:id', asyncRoute(async (req, res) => {
     const id = Number(req.params.id);
 
     const mfr = await query(
-        'SELECT * FROM manufacturers WHERE id = $1',
+        'SELECT m.*, ' +
+        '    (SELECT ROUND(AVG(EXTRACT(EPOCH FROM (pr.updated_at - pr.created_at)) / 86400.0)::numeric, 1) ' +
+        '     FROM production_runs pr ' +
+        "     WHERE pr.manufacturer_id = m.id AND pr.status = 'received') AS avg_production_days " +
+        'FROM manufacturers m WHERE m.id = $1',
         [id]
     );
 
@@ -95,10 +102,15 @@ router.post('/', asyncRoute(async (req, res) => {
 
     const countryValue = country || null;
     const notesValue = notes || null;
+    const leadTimeValue = body.lead_time_days === '' || body.lead_time_days == null ? null : Number(body.lead_time_days);
+    const moqValue = body.min_order_quantity === '' || body.min_order_quantity == null ? null : Number(body.min_order_quantity);
+    const paymentTermsValue = body.payment_terms || null;
+    const qualityValue = body.quality_rating === '' || body.quality_rating == null ? null : Number(body.quality_rating);
 
     const result = await query(
-        'INSERT INTO manufacturers (name, country, notes) VALUES ($1, $2, $3) RETURNING *',
-        [name, countryValue, notesValue]
+        'INSERT INTO manufacturers (name, country, notes, lead_time_days, min_order_quantity, payment_terms, quality_rating) ' +
+        'VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+        [name, countryValue, notesValue, leadTimeValue, moqValue, paymentTermsValue, qualityValue]
     );
     res.status(201).json({ manufacturer: result.rows[0] });
 }));
@@ -109,6 +121,10 @@ router.patch('/:id', asyncRoute(async (req, res) => {
     const nameValue = body.name ?? null;
     const countryValue = body.country ?? null;
     const notesValue = body.notes ?? null;
+    const leadTimeValue = body.lead_time_days === '' ? null : (body.lead_time_days ?? null);
+    const moqValue = body.min_order_quantity === '' ? null : (body.min_order_quantity ?? null);
+    const paymentTermsValue = body.payment_terms ?? null;
+    const qualityValue = body.quality_rating === '' ? null : (body.quality_rating ?? null);
 
     const id = Number(req.params.id);
     // COALESCE keeps the current value when a field is omitted.
@@ -117,10 +133,14 @@ router.patch('/:id', asyncRoute(async (req, res) => {
         '    name = COALESCE($1, name), ' +
         '    country = COALESCE($2, country), ' +
         '    notes = COALESCE($3, notes), ' +
+        '    lead_time_days = COALESCE($4, lead_time_days), ' +
+        '    min_order_quantity = COALESCE($5, min_order_quantity), ' +
+        '    payment_terms = COALESCE($6, payment_terms), ' +
+        '    quality_rating = COALESCE($7, quality_rating), ' +
         '    updated_at = NOW() ' +
-        'WHERE id = $4 RETURNING *';
+        'WHERE id = $8 RETURNING *';
 
-    const result = await query(sql, [nameValue, countryValue, notesValue, id]);
+    const result = await query(sql, [nameValue, countryValue, notesValue, leadTimeValue, moqValue, paymentTermsValue, qualityValue, id]);
 
     if (!result.rows[0]) {
         return res.status(404).json({ error: 'Manufacturer not found.' });

@@ -5,6 +5,7 @@ const { asyncRoute } = require('../middleware/errorHandler');
 const shopify = require('../services/integrations/shopify');
 const zohoCrm = require('../services/integrations/zohoCrm');
 const aftership = require('../services/integrations/aftership');
+const { computeProductMetrics } = require('../services/productMetrics');
 
 const router = express.Router();
 router.use(authenticate);
@@ -73,10 +74,40 @@ router.get('/sales', requirePermission('sales'), asyncRoute(async (req, res) => 
     });
 }));
 
+router.get('/product-performance', requirePermission('sales'), asyncRoute(async (req, res) => {
+    const [sales, stock, costResult] = await Promise.all([
+        shopify.getSalesOverview(),
+        shopify.getStockLevels(),
+        query('SELECT sku, unit_cost FROM products WHERE unit_cost IS NOT NULL')
+    ]);
+
+    const costBySku = {};
+    for (const row of costResult.rows) {
+        costBySku[row.sku] = Number(row.unit_cost);
+    }
+
+    const stockBySku = {};
+    for (const s of stock) {
+        stockBySku[s.sku] = s;
+    }
+
+    const rows = [];
+    for (const p of sales) {
+        rows.push(computeProductMetrics(p, stockBySku[p.sku], costBySku[p.sku]));
+    }
+
+    rows.sort(function (a, b) {
+        return b.revenue_30d - a.revenue_30d;
+    });
+
+    res.json({ products: rows });
+}));
+
 router.get('/customers', requirePermission('customers'), asyncRoute(async (req, res) => {
-    const [shop, crm] = await Promise.all([
+    const [shop, crm, purchases] = await Promise.all([
         shopify.getTopCustomers(),
-        zohoCrm.getCrmCustomers()
+        zohoCrm.getCrmCustomers(),
+        shopify.getCustomerPurchases()
     ]);
 
     // Index CRM records by email to match Shopify customers.
@@ -105,9 +136,14 @@ router.get('/customers', requirePermission('customers'), asyncRoute(async (req, 
             }
         }
 
+        const purchase = purchases[c.email];
+
         const customer = Object.assign({}, c);
         customer.segment = segment;
         customer.crm_notes = crmNotes;
+        customer.favorite_title = purchase ? purchase.favorite_title : null;
+        customer.favorite_units = purchase ? purchase.favorite_units : 0;
+        customer.history = purchase ? purchase.history : [];
         customers.push(customer);
     }
 

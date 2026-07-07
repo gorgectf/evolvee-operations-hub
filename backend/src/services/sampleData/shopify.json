@@ -146,5 +146,31 @@
     { "sku": "ER-TNR-007", "name": "Rosewater Toner 100ml", "price": 18.00, "stock_on_hand": 160, "reorder_level": 50 },
     { "sku": "ER-KIT-008", "name": "Starter Ritual Kit", "price": 80.00, "stock_on_hand": 12, "reorder_level": 20 }
   ],
-  "orders_today": { "orders_count": 37, "sales_total": 1284.50 }
+  "orders_today": { "orders_count": 37, "sales_total": 1284.50 },
+  "customer_purchases": {
+    "customer001@example.com": {
+      "favorite_title": "Radiance Renewal Serum 30ml",
+      "favorite_units": 6,
+      "history": [
+        { "date": "2026-06-08", "order": "#1041", "total": 102.00, "items": [{ "title": "Radiance Renewal Serum 30ml", "qty": 3 }] },
+        { "date": "2026-05-20", "order": "#1022", "total": 68.00, "items": [{ "title": "Radiance Renewal Serum 30ml", "qty": 2 }] },
+        { "date": "2026-04-30", "order": "#0998", "total": 34.00, "items": [{ "title": "Radiance Renewal Serum 30ml", "qty": 1 }] }
+      ]
+    },
+    "customer002@example.com": {
+      "favorite_title": "Hydra-Silk Day Cream 50ml",
+      "favorite_units": 4,
+      "history": [
+        { "date": "2026-06-02", "order": "#1035", "total": 92.00, "items": [{ "title": "Hydra-Silk Day Cream 50ml", "qty": 2 }, { "title": "Rosewater Toner 100ml", "qty": 1 }] },
+        { "date": "2026-05-11", "order": "#1014", "total": 64.00, "items": [{ "title": "Hydra-Silk Day Cream 50ml", "qty": 2 }] }
+      ]
+    },
+    "customer003@example.com": {
+      "favorite_title": "Soothing Lip Balm 10ml",
+      "favorite_units": 5,
+      "history": [
+        { "date": "2026-05-28", "order": "#1029", "total": 40.00, "items": [{ "title": "Soothing Lip Balm 10ml", "qty": 5 }] }
+      ]
+    }
+  }
 }
