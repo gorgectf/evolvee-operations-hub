@@ -17,13 +17,10 @@ function databaseSsl() {
 
   if (override === 'false') {
     return false;
-<<<<<<< HEAD
-=======
   }
 
   if (override !== 'true' && isLocalhost(env.databaseUrl)) {
     return false;
->>>>>>> testing
   }
 
   const ca = (env.databaseCaCert || '').replace(/\\n/g, '\n').trim();

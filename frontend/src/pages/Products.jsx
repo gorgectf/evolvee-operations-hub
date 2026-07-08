@@ -86,7 +86,6 @@ export default function Products() {
     async function syncShopify() {
         setError('');
         setSyncMsg('Syncing…');
-        
         try {
             const r = await api('/products/sync-shopify', { method: 'POST' });
             setSyncMsg(`Added ${r.added} new of ${r.total} Shopify items.`);

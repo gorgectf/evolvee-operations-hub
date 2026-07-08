@@ -1,5 +1,5 @@
 # Operations Hub
- 
+
 Internal operations dashboard plus a manufacturer/reorder management tool.
 
 Stack: React (Vite), Node.js/Express, PostgreSQL, JWT auth, node-cron.
