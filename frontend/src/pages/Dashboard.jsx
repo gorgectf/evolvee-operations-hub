@@ -21,6 +21,104 @@ function formatGBP(amount) {
     });
 }
 
+function sumBy(list, key) {
+    return (list || []).reduce((acc, item) => acc + Number(item[key] || 0), 0);
+}
+
+function formatCount(value) {
+    return Number(value || 0).toLocaleString('en-GB');
+}
+
+function ExecKpiCards({ inventory, sales, revenue, shipping, alerts }) {
+    const cards = [];
+
+    if (revenue.data) {
+        cards.push({
+            key: 'revenue',
+            label: 'Revenue — this month',
+            value: formatGBP(sumBy(revenue.data.daily, 'revenue')),
+        });
+    }
+
+    if (sales.data) {
+        cards.push({
+            key: 'sales-today',
+            label: "Today's sales",
+            value: formatGBP(sales.data.sales_today || 0),
+        });
+        cards.push({
+            key: 'orders-today',
+            label: 'Orders today',
+            value: formatCount(sales.data.orders_today),
+        });
+        cards.push({
+            key: 'sales-revenue',
+            label: 'Sales — last 30 days',
+            value: formatGBP(sumBy(sales.data.products, 'revenue_30d')),
+        });
+        cards.push({
+            key: 'units',
+            label: 'Units sold — 30 days',
+            value: formatCount(sumBy(sales.data.products, 'units_sold_30d')),
+        });
+    }
+
+    if (inventory.data) {
+        const inventoryValue = (inventory.data.items || []).reduce(
+            (acc, item) => acc + Number(item.price || 0) * Number(item.stock_on_hand || 0),
+            0,
+        );
+        cards.push({
+            key: 'inventory-value',
+            label: 'Inventory value',
+            value: formatGBP(inventoryValue),
+        });
+        cards.push({
+            key: 'stock',
+            label: 'Units in stock',
+            value: formatCount(sumBy(inventory.data.items, 'stock_on_hand')),
+        });
+        cards.push({
+            key: 'low-stock',
+            label: 'Low stock SKUs',
+            value: formatCount(inventory.data.low_count),
+            bad: inventory.data.low_count > 0,
+        });
+    }
+
+    if (shipping.data) {
+        const pending = (shipping.data.trackings || []).filter((t) => t.status !== 'Delivered').length;
+        cards.push({
+            key: 'pending',
+            label: 'Pending shipments',
+            value: formatCount(pending),
+            bad: (shipping.data.exceptions || []).length > 0,
+        });
+    }
+
+    if (alerts.data) {
+        cards.push({
+            key: 'alerts',
+            label: 'Open reorder alerts',
+            value: formatCount(alerts.data.open_count),
+            bad: alerts.data.open_count > 0,
+        });
+    }
+
+    if (cards.length === 0) return null;
+
+    return (
+        <div className="kpi-strip">
+            {cards.map((c) => (
+                <div className="kpi kpi-card" key={c.key}>
+                    <div className="v" style={c.bad ? { color: 'var(--bad)' } : undefined}>{c.value}</div>
+                    <div className="l">{c.label}</div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 function Tile({ title, source, wide, children }) {
     return (
         <section className={`tile${wide ? ' wide' : ''}`}>
@@ -141,6 +239,7 @@ export default function Dashboard() {
 
     const inventory = useModule('/dashboard/inventory', canAccess('inventory'));
     const sales = useModule('/dashboard/sales', canAccess('sales'));
+    const productPerf = useModule('/dashboard/product-performance', canAccess('sales'));
     const customers = useModule('/dashboard/customers', canAccess('customers'));
     const revenue = useModule('/dashboard/revenue', canAccess('revenue'));
     const shipping = useModule('/dashboard/shipping', canAccess('shipping'));
@@ -164,6 +263,14 @@ export default function Dashboard() {
                     be showing older data: {failedSources.map((source) => source.source).join(', ')}.
                 </div>
             )}
+
+            <ExecKpiCards
+                inventory={inventory}
+                sales={sales}
+                revenue={revenue}
+                shipping={shipping}
+                alerts={alerts}
+            />
 
             <div className="grid">
                 {canAccess('alerts') && (
@@ -286,6 +393,30 @@ export default function Dashboard() {
                     </Tile>
                 )}
 
+                {canAccess('sales') && (
+                    <Tile title="Product performance — last 30 days" source="Shopify" wide>
+                        <Body state={productPerf}>
+                            {(data) => (
+                                <DataTable
+                                    rows={data.products}
+                                    filename="product-performance.csv"
+                                    keyField="sku"
+                                    copyKey="sku"
+                                    columns={[
+                                        { label: 'SKU', key: 'sku' },
+                                        { label: 'Product', key: 'title' },
+                                        { label: 'Units (30d)', key: 'units_sold_30d', num: true },
+                                        { label: 'Revenue (30d)', key: 'revenue_30d', num: true, render: (p) => formatGBP(p.revenue_30d) },
+                                        { label: 'Margin %', key: 'margin_pct', num: true, render: (p) => (p.margin_pct != null ? `${p.margin_pct}%` : '—') },
+                                        { label: 'Turnover', key: 'turnover', num: true, render: (p) => (p.turnover != null ? p.turnover : '—') },
+                                        { label: 'Sell-through %', key: 'sell_through', num: true, render: (p) => (p.sell_through != null ? `${p.sell_through}%` : '—') },
+                                    ]}
+                                />
+                            )}
+                        </Body>
+                    </Tile>
+                )}
+
                 {canAccess('customers') && (
                     <Tile title="Top customers" source="Shopify + Zoho CRM">
                         <Body state={customers}>
@@ -298,7 +429,22 @@ export default function Dashboard() {
                                         { label: 'Customer', key: 'name' },
                                         { label: 'Segment', key: 'segment', render: (c) => <span className="pill info">{c.segment}</span> },
                                         { label: 'Orders', key: 'orders_count', num: true },
-                                        { label: 'Total spent', key: 'total_spent', num: true, render: (c) => formatGBP(c.total_spent) },
+                                        { label: 'Total spent (LTV)', key: 'total_spent', num: true, render: (c) => formatGBP(c.total_spent) },
+                                        { label: 'Avg order', key: 'avg_order', num: true, render: (c) => formatGBP(c.orders_count > 0 ? c.total_spent / c.orders_count : 0) },
+                                        { label: 'Returning', key: 'returning', render: (c) => <span className={`pill ${c.orders_count > 1 ? 'ok' : 'info'}`}>{c.orders_count > 1 ? 'Returning' : 'New'}</span> },
+                                        { label: 'Favorite', key: 'favorite_title', render: (c) => c.favorite_title ? `${c.favorite_title} (${c.favorite_units})` : '—' },
+                                        { label: 'History', key: 'history', render: (c) => (c.history && c.history.length) ? (
+                                            <details>
+                                                <summary>{c.history.length} order{c.history.length === 1 ? '' : 's'}</summary>
+                                                <ul style={{ margin: '6px 0 0', paddingLeft: 16 }}>
+                                                    {c.history.map((h, i) => (
+                                                        <li key={i} style={{ fontSize: 12 }}>
+                                                            {h.date} · {h.order} · {formatGBP(h.total)}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </details>
+                                        ) : '—' },
                                     ]}
                                 />
                             )}

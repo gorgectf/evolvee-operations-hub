@@ -3,11 +3,27 @@ const env = require('./env');
 
 types.setTypeParser(1082, (value) => value);
 
+function isLocalhost(connectionString) {
+  try {
+    const host = new URL(connectionString).hostname;
+    return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  } catch {
+    return false;
+  }
+}
+
 function databaseSsl() {
   const override = (env.databaseSsl || '').trim().toLowerCase();
 
   if (override === 'false') {
     return false;
+<<<<<<< HEAD
+=======
+  }
+
+  if (override !== 'true' && isLocalhost(env.databaseUrl)) {
+    return false;
+>>>>>>> testing
   }
 
   const ca = (env.databaseCaCert || '').replace(/\\n/g, '\n').trim();

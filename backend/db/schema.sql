@@ -12,13 +12,22 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS manufacturers (
-    id         SERIAL PRIMARY KEY,
-    name       TEXT NOT NULL,
-    country    TEXT,
-    notes      TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id                 SERIAL PRIMARY KEY,
+    name               TEXT NOT NULL,
+    country            TEXT,
+    notes              TEXT,
+    lead_time_days     INTEGER CHECK (lead_time_days >= 0),
+    min_order_quantity INTEGER CHECK (min_order_quantity >= 0),
+    payment_terms      TEXT,
+    quality_rating     INTEGER CHECK (quality_rating BETWEEN 1 AND 5),
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE manufacturers ADD COLUMN IF NOT EXISTS lead_time_days     INTEGER;
+ALTER TABLE manufacturers ADD COLUMN IF NOT EXISTS min_order_quantity INTEGER;
+ALTER TABLE manufacturers ADD COLUMN IF NOT EXISTS payment_terms      TEXT;
+ALTER TABLE manufacturers ADD COLUMN IF NOT EXISTS quality_rating     INTEGER;
 
 CREATE TABLE IF NOT EXISTS manufacturer_contacts (
     id              SERIAL PRIMARY KEY,
@@ -39,11 +48,13 @@ CREATE TABLE IF NOT EXISTS products (
     -- matched on this; SKU is still used for the bundled sample data.
     shopify_inventory_item_id TEXT,
     manufacturer_id INTEGER REFERENCES manufacturers(id) ON DELETE SET NULL,
+    unit_cost       NUMERIC(10,2),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- For databases created before the column existed:
 ALTER TABLE products ADD COLUMN IF NOT EXISTS shopify_inventory_item_id TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS unit_cost NUMERIC(10,2);
 
 CREATE TABLE IF NOT EXISTS reorder_thresholds (
     id         SERIAL PRIMARY KEY,

@@ -10,7 +10,7 @@ async function getTrackings() {
             return sample.trackings;
         }
 
-        const url = 'https://api.aftership.com/tracking/2025-01/trackings';
+        const url = 'https://api.aftership.com/tracking/2026-01/trackings';
         const options = {
             headers: { 'as-api-key': env.aftership.apiKey }
         };

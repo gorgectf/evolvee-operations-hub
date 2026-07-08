@@ -6,7 +6,7 @@ import { useTableView, SortHeader, SearchBox, onEnter } from '../ui.jsx';
 export default function Manufacturers() {
     const [list, setList] = useState(null);
     const [error, setError] = useState('');
-    const [form, setForm] = useState({ name: '', country: '', notes: '' });
+    const [form, setForm] = useState({ name: '', country: '', notes: '', lead_time_days: '', min_order_quantity: '', payment_terms: '', quality_rating: '' });
     const [adding, setAdding] = useState(false);
     const { query, setQuery, view, sort, toggleSort } = useTableView(list, ['name', 'country', 'notes']);
 
@@ -41,7 +41,7 @@ export default function Manufacturers() {
 
         try {
             await api('/manufacturers', { method: 'POST', body: JSON.stringify(form) });
-            setForm({ name: '', country: '', notes: '' });
+            setForm({ name: '', country: '', notes: '', lead_time_days: '', min_order_quantity: '', payment_terms: '', quality_rating: '' });
             setAdding(false);
             load();
         } catch (e) {
@@ -82,8 +82,54 @@ export default function Manufacturers() {
                         />
                     </div>
 
+                    <div className="row">
+                        <div className="field" style={{ flex: 1 }}>
+                            <label>Lead time (days)</label>
+                            <input
+                                type="number"
+                                min="0"
+                                value={form.lead_time_days}
+                                onChange={(e) => updateForm('lead_time_days', e.target.value)}
+                                onKeyDown={onEnter(create)}
+                            />
+                        </div>
+                        <div className="field" style={{ flex: 1 }}>
+                            <label>Min order qty</label>
+                            <input
+                                type="number"
+                                min="0"
+                                value={form.min_order_quantity}
+                                onChange={(e) => updateForm('min_order_quantity', e.target.value)}
+                                onKeyDown={onEnter(create)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="row">
+                        <div className="field" style={{ flex: 1 }}>
+                            <label>Payment terms</label>
+                            <input
+                                placeholder="e.g. Net 30"
+                                value={form.payment_terms}
+                                onChange={(e) => updateForm('payment_terms', e.target.value)}
+                                onKeyDown={onEnter(create)}
+                            />
+                        </div>
+                        <div className="field" style={{ flex: 1 }}>
+                            <label>Quality (1-5)</label>
+                            <input
+                                type="number"
+                                min="1"
+                                max="5"
+                                value={form.quality_rating}
+                                onChange={(e) => updateForm('quality_rating', e.target.value)}
+                                onKeyDown={onEnter(create)}
+                            />
+                        </div>
+                    </div>
+
                     <div className="field">
-                        <label>Notes (lead times, minimum orders…)</label>
+                        <label>Notes</label>
                         <textarea
                             rows={2}
                             value={form.notes}
@@ -122,12 +168,14 @@ export default function Manufacturers() {
                                 <SortHeader label="Country" sortKey="country" sort={sort} toggleSort={toggleSort} />
                                 <SortHeader label="Products" sortKey="product_count" sort={sort} toggleSort={toggleSort} className="num" />
                                 <SortHeader label="Active runs" sortKey="active_runs" sort={sort} toggleSort={toggleSort} className="num" />
+                                <SortHeader label="Lead time (d)" sortKey="lead_time_days" sort={sort} toggleSort={toggleSort} className="num" />
+                                <SortHeader label="Quality" sortKey="quality_rating" sort={sort} toggleSort={toggleSort} className="num" />
                                 <th>Notes</th>
                             </tr>
                         </thead>
                         <tbody>
                             {view.length === 0 && (
-                                <tr><td colSpan={5} className="empty">No manufacturers match “{query}”.</td></tr>
+                                <tr><td colSpan={7} className="empty">No manufacturers match “{query}”.</td></tr>
                             )}
                             {view.map(function (m) {
                                 return (
@@ -140,6 +188,8 @@ export default function Manufacturers() {
                                         <td>{m.country || '—'}</td>
                                         <td className="num">{m.product_count}</td>
                                         <td className="num">{m.active_runs}</td>
+                                        <td className="num">{m.lead_time_days ?? '—'}</td>
+                                        <td className="num">{m.quality_rating ? `${m.quality_rating}/5` : '—'}</td>
                                         <td style={{ color: 'var(--muted)' }}>{m.notes || ''}</td>
                                     </tr>
                                 );

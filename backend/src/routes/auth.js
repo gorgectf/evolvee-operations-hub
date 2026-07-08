@@ -11,9 +11,18 @@ const router = express.Router();
 const DUMMY_HASH = bcrypt.hashSync('unused-timing-equaliser', 10);
 
 const loginAttempts = new Map();
+function overLimit(key, now, windowMs, max) {
+    const rec = loginAttempts.get(key);
+    if (!rec || now - rec.start > windowMs) {
+        loginAttempts.set(key, { start: now, count: 1 });
+        return false;
+    }
+    rec.count += 1;
+    return rec.count > max;
+}
+
 function rateLimit(req, res, next) {
     const windowMs = 15 * 60 * 1000;
-    const max = 10;
     const now = Date.now();
 
     if (loginAttempts.size > 5000) {
@@ -25,16 +34,10 @@ function rateLimit(req, res, next) {
     }
 
     const email = req.body && req.body.email ? String(req.body.email).toLowerCase().trim() : '';
-    const key = req.ip + '|' + email;
-    const rec = loginAttempts.get(key);
+    const perEmail = overLimit(req.ip + '|' + email, now, windowMs, 10);
+    const perIp = overLimit('ip|' + req.ip, now, windowMs, 50);
 
-    if (!rec || now - rec.start > windowMs) {
-        loginAttempts.set(key, { start: now, count: 1 });
-        return next();
-    }
-
-    rec.count += 1;
-    if (rec.count > max) {
+    if (perEmail || perIp) {
         return res.status(429).json({ error: 'Too many attempts. Please wait and try again.' });
     }
     next();
@@ -130,5 +133,16 @@ router.post('/password', rateLimit, authenticate, asyncRoute(async (req, res) =>
     await query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, req.user.id]);
     res.json({ ok: true });
 }));
+
+if (require.main === module) {
+    const assert = require('assert');
+    const now = Date.now();
+    const w = 1000;
+    for (let i = 0; i < 50; i++) {
+        assert.strictEqual(overLimit('ip|x', now, w, 50), false);
+    }
+    assert.strictEqual(overLimit('ip|x', now, w, 50), true);
+    console.log('rateLimit self-check passed.');
+}
 
 module.exports = router;

@@ -25,10 +25,10 @@ function errorHandler(err, req, res, next) {
     let responseMessage;
     if (mapped) {
         responseMessage = mapped.message;
-    } else if (status === 500) {
-        responseMessage = 'Something went wrong on the server.';
-    } else {
+    } else if (status < 500 && err.expose) {
         responseMessage = err.message;
+    } else {
+        responseMessage = 'Something went wrong on the server.';
     }
 
     res.status(status).json({ error: responseMessage });

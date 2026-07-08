@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useTableView, SortHeader, SearchBox, onEnter } from '../ui.jsx';
 
-const EMPTY_FORM = { sku: '', name: '', manufacturer_id: '', threshold: '' };
+const EMPTY_FORM = { sku: '', name: '', manufacturer_id: '', threshold: '', unit_cost: '' };
 
 export default function Products() {
     const [products, setProducts] = useState(null);
@@ -10,7 +11,9 @@ export default function Products() {
     const [error, setError] = useState('');
     // In-progress threshold edits, keyed by product id.
     const [edits, setEdits] = useState({});
+    const [costEdits, setCostEdits] = useState({});
     const [form, setForm] = useState(EMPTY_FORM);
+    const [syncMsg, setSyncMsg] = useState('');
     const { query, setQuery, view, sort, toggleSort } = useTableView(products, ['sku', 'name', 'manufacturer_name']);
 
     function load() {
@@ -36,16 +39,32 @@ export default function Products() {
         setEdits((prev) => ({ ...prev, [productId]: undefined }));
     }
 
-    async function saveThreshold(product) {
-        const value = edits[product.id];
-        // Nothing to save if the field is untouched or cleared.
-        if (value === undefined || value === '') return;
+    function updateCostEdit(productId, value) {
+        setCostEdits((prev) => ({ ...prev, [productId]: value }));
+    }
+
+    function clearCostEdit(productId) {
+        setCostEdits((prev) => ({ ...prev, [productId]: undefined }));
+    }
+
+    async function saveRow(product) {
+        const threshold = edits[product.id];
+        const cost = costEdits[product.id];
         try {
-            await api(`/products/${product.id}/threshold`, {
-                method: 'PUT',
-                body: JSON.stringify({ threshold: Number(value) }),
-            });
-            clearEdit(product.id);
+            if (threshold !== undefined && threshold !== '') {
+                await api(`/products/${product.id}/threshold`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ threshold: Number(threshold) }),
+                });
+                clearEdit(product.id);
+            }
+            if (cost !== undefined && cost !== '') {
+                await api(`/products/${product.id}/cost`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ unit_cost: Number(cost) }),
+                });
+                clearCostEdit(product.id);
+            }
             load();
         } catch (e) {
             setError(e.message);
@@ -64,6 +83,20 @@ export default function Products() {
         }
     }
 
+    async function syncShopify() {
+        setError('');
+        setSyncMsg('Syncing…');
+        
+        try {
+            const r = await api('/products/sync-shopify', { method: 'POST' });
+            setSyncMsg(`Added ${r.added} new of ${r.total} Shopify items.`);
+            load();
+        } catch (e) {
+            setSyncMsg('');
+            setError(e.message);
+        }
+    }
+
     async function createProduct() {
         if (!form.sku.trim() || !form.name.trim()) {
             return setError('SKU / item ID and product name are required.');
@@ -76,6 +109,7 @@ export default function Products() {
                     ...form,
                     manufacturer_id: form.manufacturer_id ? Number(form.manufacturer_id) : null,
                     threshold: form.threshold === '' ? null : Number(form.threshold),
+                    unit_cost: form.unit_cost === '' ? null : Number(form.unit_cost),
                 }),
             });
             setForm(EMPTY_FORM);
@@ -95,7 +129,7 @@ export default function Products() {
         return (
             <tr key={product.id}>
                 <td>{product.sku}</td>
-                <td>{product.name}</td>
+                <td><Link to={`/products/${product.id}`}>{product.name}</Link></td>
                 <td>
                     <select
                         value={product.manufacturer_id || ''}
@@ -116,8 +150,18 @@ export default function Products() {
                         onChange={(e) => updateEdit(product.id, e.target.value)}
                     />
                 </td>
+                <td className="num">
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        style={{ maxWidth: 90, textAlign: 'right' }}
+                        value={costEdits[product.id] ?? product.unit_cost ?? ''}
+                        onChange={(e) => updateCostEdit(product.id, e.target.value)}
+                    />
+                </td>
                 <td>
-                    <button className="link" onClick={() => saveThreshold(product)}>Save</button>
+                    <button className="link" onClick={() => saveRow(product)}>Save</button>
                 </td>
             </tr>
         );
@@ -163,6 +207,16 @@ export default function Products() {
                         onKeyDown={onEnter(createProduct)}
                         style={{ maxWidth: 120 }}
                     />
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="Unit cost £"
+                        value={form.unit_cost}
+                        onChange={(e) => updateForm('unit_cost', e.target.value)}
+                        onKeyDown={onEnter(createProduct)}
+                        style={{ maxWidth: 120 }}
+                    />
                     <button className="primary" onClick={createProduct} style={{ flex: '0 0 auto' }}>
                         Add
                     </button>
@@ -179,6 +233,8 @@ export default function Products() {
                             setQuery={setQuery}
                             placeholder="Search SKU, product, manufacturer…"
                         />
+                        <button className="link" onClick={syncShopify}>Sync from Shopify</button>
+                        {syncMsg && <span style={{ color: 'var(--muted)', fontSize: 13 }}>{syncMsg}</span>}
                     </div>
                     <table>
                         <thead>
@@ -187,12 +243,13 @@ export default function Products() {
                                 <SortHeader label="Product" sortKey="name" sort={sort} toggleSort={toggleSort} />
                                 <SortHeader label="Manufacturer" sortKey="manufacturer_name" sort={sort} toggleSort={toggleSort} />
                                 <SortHeader label="Reorder threshold" sortKey="threshold" sort={sort} toggleSort={toggleSort} className="num" />
+                                <SortHeader label="Unit cost (£)" sortKey="unit_cost" sort={sort} toggleSort={toggleSort} className="num" />
                                 <th />
                             </tr>
                         </thead>
                         <tbody>
                             {view.length === 0 ? (
-                                <tr><td colSpan={5} className="empty">No products match “{query}”.</td></tr>
+                                <tr><td colSpan={6} className="empty">No products match “{query}”.</td></tr>
                             ) : view.map(renderRow)}
                         </tbody>
                     </table>

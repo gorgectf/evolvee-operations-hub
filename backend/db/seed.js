@@ -29,10 +29,10 @@ async function seed() {
     );
 
     const manufacturerResult = await query(
-        `INSERT INTO manufacturers (name, country, notes) VALUES
-         ('Lumina Labs Ltd',    'United Kingdom', 'Primary serum and oil manufacturer. 4-6 week lead time.'),
-         ('PureForm Cosmetics', 'France',         'Creams and balms. Minimum order 500 units per SKU.'),
-         ('GlowPack Packaging', 'China',          'Bottles, jars, and outer packaging. 8 week lead time by sea.')
+        `INSERT INTO manufacturers (name, country, notes, lead_time_days, min_order_quantity, payment_terms, quality_rating) VALUES
+         ('Lumina Labs Ltd',    'United Kingdom', 'Primary serum and oil manufacturer. 4-6 week lead time.', 35,  250, 'Net 30',      5),
+         ('PureForm Cosmetics', 'France',         'Creams and balms. Minimum order 500 units per SKU.',       42,  500, 'Net 45',      4),
+         ('GlowPack Packaging', 'China',          'Bottles, jars, and outer packaging. 8 week lead time by sea.', 56, 1000, '50% deposit', 3)
          RETURNING id`
     );
 
@@ -57,22 +57,22 @@ async function seed() {
     // product so stock levels and reorder alerts match. The demo rows below leave
     // it NULL because sample mode joins by SKU.
     const productRows = [
-        ['ER-SER-001', 'Radiance Renewal Serum 30ml', luminaId],
-        ['ER-OIL-002', 'Golden Glow Face Oil 25ml',   luminaId],
-        ['ER-CRM-003', 'Hydra-Silk Day Cream 50ml',   pureformId],
-        ['ER-CRM-004', 'Night Repair Cream 50ml',      pureformId],
-        ['ER-BLM-005', 'Soothing Lip Balm 10ml',       pureformId],
-        ['ER-MSK-006', 'Clay Detox Mask 75ml',         luminaId],
-        ['ER-TNR-007', 'Rosewater Toner 100ml',        luminaId],
-        ['ER-KIT-008', 'Starter Ritual Kit',           glowpackId],
+        ['ER-SER-001', 'Radiance Renewal Serum 30ml', luminaId,   12.00],
+        ['ER-OIL-002', 'Golden Glow Face Oil 25ml',   luminaId,   10.00],
+        ['ER-CRM-003', 'Hydra-Silk Day Cream 50ml',   pureformId, 11.00],
+        ['ER-CRM-004', 'Night Repair Cream 50ml',      pureformId, 14.00],
+        ['ER-BLM-005', 'Soothing Lip Balm 10ml',       pureformId, 3.00],
+        ['ER-MSK-006', 'Clay Detox Mask 75ml',         luminaId,   9.00],
+        ['ER-TNR-007', 'Rosewater Toner 100ml',        luminaId,   6.00],
+        ['ER-KIT-008', 'Starter Ritual Kit',           glowpackId, 32.00],
     ];
 
     const productIds = {};
 
-    for (const [sku, name, manufacturerId] of productRows) {
+    for (const [sku, name, manufacturerId, unitCost] of productRows) {
         const result = await query(
-            'INSERT INTO products (sku, name, manufacturer_id) VALUES ($1,$2,$3) RETURNING id',
-            [sku, name, manufacturerId]
+            'INSERT INTO products (sku, name, manufacturer_id, unit_cost) VALUES ($1,$2,$3,$4) RETURNING id',
+            [sku, name, manufacturerId, unitCost]
         );
         productIds[sku] = result.rows[0].id;
     }

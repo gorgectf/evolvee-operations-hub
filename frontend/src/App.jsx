@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard.jsx';
 import Manufacturers from './pages/Manufacturers.jsx';
 import ManufacturerDetail from './pages/ManufacturerDetail.jsx';
 import Products from './pages/Products.jsx';
+import ProductDetail from './pages/ProductDetail.jsx';
 import Alerts from './pages/Alerts.jsx';
 import ProductionRuns from './pages/ProductionRuns.jsx';
 import Users from './pages/Users.jsx';
@@ -112,6 +113,7 @@ export default function App() {
                 <Route path="/manufacturers" element={<Manufacturers />} />
                 <Route path="/manufacturers/:id" element={<ManufacturerDetail />} />
                 <Route path="/products" element={<Products />} />
+                <Route path="/products/:id" element={<ProductDetail />} />
                 <Route path="/alerts" element={<Alerts />} />
                 <Route path="/production" element={<ProductionRuns />} />
                 <Route path="/users" element={<Users />} />

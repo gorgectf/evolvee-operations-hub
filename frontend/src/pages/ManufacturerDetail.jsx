@@ -13,6 +13,7 @@ export default function ManufacturerDetail() {
     const [comm, setComm] = useState({ channel: 'email', summary: '' });
     const [contact, setContact] = useState({ name: '', role: '', email: '', phone: '' });
     const [reorder, setReorder] = useState({ product_id: '', quantity_ordered: '', notes: '' });
+    const [metrics, setMetrics] = useState({ lead_time_days: '', min_order_quantity: '', payment_terms: '', quality_rating: '' });
 
     const load = useCallback(function loadManufacturer() {
         api(`/manufacturers/${id}`)
@@ -25,6 +26,18 @@ export default function ManufacturerDetail() {
     useEffect(function () {
         load();
     }, [load]);
+
+    useEffect(function () {
+        if (data && data.manufacturer) {
+            const m = data.manufacturer;
+            setMetrics({
+                lead_time_days: m.lead_time_days ?? '',
+                min_order_quantity: m.min_order_quantity ?? '',
+                payment_terms: m.payment_terms ?? '',
+                quality_rating: m.quality_rating ?? '',
+            });
+        }
+    }, [data]);
 
     // POST a sub-resource, then clear its form and reload.
     async function post(path, body, reset) {
@@ -54,6 +67,22 @@ export default function ManufacturerDetail() {
         setReorder(function (prev) {
             return { ...prev, [field]: value };
         });
+    }
+
+    function updateMetrics(field, value) {
+        setMetrics(function (prev) {
+            return { ...prev, [field]: value };
+        });
+    }
+
+    async function saveMetrics() {
+        setError('');
+        try {
+            await api(`/manufacturers/${id}`, { method: 'PATCH', body: JSON.stringify(metrics) });
+            load();
+        } catch (e) {
+            setError(e.message);
+        }
     }
 
     function submitContact() {
@@ -120,6 +149,68 @@ export default function ManufacturerDetail() {
             )}
 
             <div className="grid">
+                <section className="tile">
+                    <h2>Supplier metrics</h2>
+
+                    <div className="row">
+                        <div className="field" style={{ flex: 1 }}>
+                            <label>Lead time (days)</label>
+                            <input
+                                type="number"
+                                min="0"
+                                value={metrics.lead_time_days}
+                                onChange={(e) => updateMetrics('lead_time_days', e.target.value)}
+                                onKeyDown={onEnter(saveMetrics)}
+                            />
+                        </div>
+                        <div className="field" style={{ flex: 1 }}>
+                            <label>Min order qty</label>
+                            <input
+                                type="number"
+                                min="0"
+                                value={metrics.min_order_quantity}
+                                onChange={(e) => updateMetrics('min_order_quantity', e.target.value)}
+                                onKeyDown={onEnter(saveMetrics)}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="row">
+                        <div className="field" style={{ flex: 1 }}>
+                            <label>Payment terms</label>
+                            <input
+                                placeholder="e.g. Net 30"
+                                value={metrics.payment_terms}
+                                onChange={(e) => updateMetrics('payment_terms', e.target.value)}
+                                onKeyDown={onEnter(saveMetrics)}
+                            />
+                        </div>
+                        <div className="field" style={{ flex: 1 }}>
+                            <label>Quality (1-5)</label>
+                            <input
+                                type="number"
+                                min="1"
+                                max="5"
+                                value={metrics.quality_rating}
+                                onChange={(e) => updateMetrics('quality_rating', e.target.value)}
+                                onKeyDown={onEnter(saveMetrics)}
+                            />
+                        </div>
+                    </div>
+
+                    <p style={{ color: 'var(--muted)', fontSize: 13 }}>
+                        Avg production time:{' '}
+                        <strong style={{ color: 'var(--ink)' }}>
+                            {m.avg_production_days != null ? `${m.avg_production_days} days` : '—'}
+                        </strong>{' '}
+                        (from received production runs)
+                    </p>
+
+                    <p>
+                        <button className="primary" onClick={saveMetrics}>Save metrics</button>
+                    </p>
+                </section>
+
                 <section className="tile">
                     <h2>Points of contact</h2>
 
