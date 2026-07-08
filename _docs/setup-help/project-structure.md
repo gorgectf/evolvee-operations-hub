@@ -8,7 +8,7 @@ operations-hub/
 ├── render.yaml               # Render Blueprint: backend web service + Postgres database
 ├── .gitignore
 ├── backend/
-│   ├── package.json          # scripts: start, dev, db:schema, db:seed, db:setup, db:reset
+│   ├── package.json          # scripts: start, dev, db:schema, db:seed, db:seed:admin, db:reset
 │   ├── .env.example          # copy to .env; all config documented inline
 │   ├── db/
 │   │   ├── schema.sql        # all tables

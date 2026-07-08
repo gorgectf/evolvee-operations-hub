@@ -87,11 +87,13 @@ const env = {
         clientSecret: envOr('ZOHO_CLIENT_SECRET', ''),
         refreshToken: envOr('ZOHO_REFRESH_TOKEN', ''),
         accountsBase: envOr('ZOHO_ACCOUNTS_BASE', 'https://accounts.zoho.com'),
-        apiBase: envOr('ZOHO_API_BASE', 'https://www.zohoapis.com')
+        apiBase: envOr('ZOHO_API_BASE', 'https://www.zohoapis.com'),
+        organizationId: envOr('ZOHO_ORGANIZATION_ID', '')
     },
 
     aftership: {
-        apiKey: envOr('AFTERSHIP_API_KEY', '')
+        apiKey: envOr('AFTERSHIP_API_KEY', ''),
+        webhookSecret: envOr('AFTERSHIP_WEBHOOK_SECRET', '')
     }
 };
 

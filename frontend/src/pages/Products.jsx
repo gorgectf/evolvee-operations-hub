@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useTableView, SortHeader, SearchBox, onEnter } from '../ui.jsx';
 
@@ -12,6 +13,7 @@ export default function Products() {
     const [edits, setEdits] = useState({});
     const [costEdits, setCostEdits] = useState({});
     const [form, setForm] = useState(EMPTY_FORM);
+    const [syncMsg, setSyncMsg] = useState('');
     const { query, setQuery, view, sort, toggleSort } = useTableView(products, ['sku', 'name', 'manufacturer_name']);
 
     function load() {
@@ -81,6 +83,20 @@ export default function Products() {
         }
     }
 
+    async function syncShopify() {
+        setError('');
+        setSyncMsg('Syncing…');
+        
+        try {
+            const r = await api('/products/sync-shopify', { method: 'POST' });
+            setSyncMsg(`Added ${r.added} new of ${r.total} Shopify items.`);
+            load();
+        } catch (e) {
+            setSyncMsg('');
+            setError(e.message);
+        }
+    }
+
     async function createProduct() {
         if (!form.sku.trim() || !form.name.trim()) {
             return setError('SKU / item ID and product name are required.');
@@ -113,7 +129,7 @@ export default function Products() {
         return (
             <tr key={product.id}>
                 <td>{product.sku}</td>
-                <td>{product.name}</td>
+                <td><Link to={`/products/${product.id}`}>{product.name}</Link></td>
                 <td>
                     <select
                         value={product.manufacturer_id || ''}
@@ -217,6 +233,8 @@ export default function Products() {
                             setQuery={setQuery}
                             placeholder="Search SKU, product, manufacturer…"
                         />
+                        <button className="link" onClick={syncShopify}>Sync from Shopify</button>
+                        {syncMsg && <span style={{ color: 'var(--muted)', fontSize: 13 }}>{syncMsg}</span>}
                     </div>
                     <table>
                         <thead>

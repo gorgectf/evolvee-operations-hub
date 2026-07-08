@@ -193,6 +193,51 @@ async function getDailyRevenue() {
     });
 }
 
+async function getSalesTrend() {
+    const mode = env.modes.shopify;
+
+    return withSync('shopify', mode, async () => {
+        if (mode === 'sample') {
+            return sample.sales_trend || {};
+        }
+
+        const since = new Date(Date.now() - 30 * 864e5).toISOString();
+
+        const url =
+            base() +
+            '/orders.json?status=any' +
+            '&created_at_min=' + since +
+            '&limit=250' +
+            '&fields=created_at,line_items';
+
+        const orders = await fetchAllPages(url, 'orders');
+
+        const bySku = {};
+        for (const o of orders) {
+            const day = o.created_at.slice(0, 10);
+            for (const li of (o.line_items || [])) {
+                const sku = li.sku || li.title;
+                if (!bySku[sku]) {
+                    bySku[sku] = {};
+                }
+                if (!bySku[sku][day]) {
+                    bySku[sku][day] = { date: day, units: 0, revenue: 0 };
+                }
+                bySku[sku][day].units += li.quantity;
+                bySku[sku][day].revenue += Number(li.price) * li.quantity;
+            }
+        }
+
+        const out = {};
+        for (const sku of Object.keys(bySku)) {
+            const days = Object.values(bySku[sku]);
+            days.sort((a, b) => (a.date < b.date ? -1 : 1));
+            out[sku] = days;
+        }
+        return out;
+    });
+}
+
 async function getStockLevels() {
     const mode = env.modes.shopify;
 
@@ -202,13 +247,15 @@ async function getStockLevels() {
         }
 
         const products = await fetchAllPages(
-            base() + '/products.json?limit=250&fields=title,variants',
+            base() + '/products.json?limit=250&fields=title,variants,image',
             'products'
         );
 
         const bySku = {};
         const itemToSku = {};
         for (const p of products) {
+            const image = (p.image && p.image.src) || null;
+
             for (const v of (p.variants || [])) {
                 const sku = v.sku || (v.inventory_item_id ? String(v.inventory_item_id) : null);
                 if (!sku) {
@@ -224,6 +271,7 @@ async function getStockLevels() {
                     inventory_item_id: v.inventory_item_id ? String(v.inventory_item_id) : null,
                     name: variantName,
                     price: Number(v.price || 0),
+                    image: image,
                     stock_on_hand: 0,
                     reorder_level: 0
                 };
@@ -332,4 +380,4 @@ async function getMonthlyRevenue() {
     });
 }
 
-module.exports = { getSalesOverview, getTopCustomers, getCustomerPurchases, getDailyRevenue, getStockLevels, getMonthlyRevenue, getTodayOrders };
+module.exports = { getSalesOverview, getTopCustomers, getCustomerPurchases, getDailyRevenue, getStockLevels, getMonthlyRevenue, getTodayOrders, getSalesTrend };
