@@ -21,8 +21,7 @@ function isAllowedOrigin(origin, callback) {
 }
 
 app.use(cors({ origin: isAllowedOrigin }));
-// rawBody kept for webhook signature verification (AfterShip HMAC check).
-app.use(express.json({ verify: function (req, res, buf) { req.rawBody = buf; } }));
+app.use(express.json());
 
 app.get('/api/health', function (req, res) {
     res.json({ ok: true, time: new Date().toISOString() });
@@ -36,7 +35,6 @@ app.use('/api/products', require('./routes/products'));
 app.use('/api/alerts', require('./routes/alerts'));
 app.use('/api/production-runs', require('./routes/productionRuns'));
 app.use('/api/sync', require('./routes/sync'));
-app.use('/api/webhooks', require('./routes/webhooks'));
 
 app.use(function (req, res) {
     res.status(404).json({ error: 'No route: ' + req.method + ' ' + req.originalUrl });

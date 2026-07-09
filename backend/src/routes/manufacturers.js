@@ -117,44 +117,38 @@ router.post('/', asyncRoute(async (req, res) => {
 
 router.patch('/:id', asyncRoute(async (req, res) => {
     const body = req.body || {};
-
-    const nameValue = body.name ?? null;
-    const countryValue = body.country ?? null;
-    const notesValue = body.notes ?? null;
-    const leadTimeValue = body.lead_time_days === '' ? null : (body.lead_time_days ?? null);
-    const moqValue = body.min_order_quantity === '' ? null : (body.min_order_quantity ?? null);
-    const paymentTermsValue = body.payment_terms ?? null;
-    const qualityValue = body.quality_rating === '' ? null : (body.quality_rating ?? null);
-
     const id = Number(req.params.id);
-    // COALESCE keeps the current value when a field is omitted.
-    const sql =
-        'UPDATE manufacturers SET ' +
-        '    name = COALESCE($1, name), ' +
-        '    country = COALESCE($2, country), ' +
-        '    notes = COALESCE($3, notes), ' +
-        '    lead_time_days = COALESCE($4, lead_time_days), ' +
-        '    min_order_quantity = COALESCE($5, min_order_quantity), ' +
-        '    payment_terms = COALESCE($6, payment_terms), ' +
-        '    quality_rating = COALESCE($7, quality_rating), ' +
-        '    updated_at = NOW() ' +
-        'WHERE id = $8 RETURNING *';
 
-    const result = await query(sql, [nameValue, countryValue, notesValue, leadTimeValue, moqValue, paymentTermsValue, qualityValue, id]);
+    // Only update columns whose key is present; '' clears numeric fields.
+    // (COALESCE couldn't tell "omitted" from "cleared", so clearing never worked.)
+    const set = [];
+    const values = [];
+    let i = 1;
+    const put = (col, val) => { set.push(`${col} = $${i++}`); values.push(val); };
+    const numOrNull = (v) => (v === '' || v == null ? null : v);
+
+    if ('name' in body) put('name', body.name);
+    if ('country' in body) put('country', body.country || null);
+    if ('notes' in body) put('notes', body.notes || null);
+    if ('lead_time_days' in body) put('lead_time_days', numOrNull(body.lead_time_days));
+    if ('min_order_quantity' in body) put('min_order_quantity', numOrNull(body.min_order_quantity));
+    if ('payment_terms' in body) put('payment_terms', body.payment_terms || null);
+    if ('quality_rating' in body) put('quality_rating', numOrNull(body.quality_rating));
+
+    if (set.length === 0) {
+        return res.status(400).json({ error: 'No fields to update.' });
+    }
+
+    set.push('updated_at = NOW()');
+    values.push(id);
+    const sql = `UPDATE manufacturers SET ${set.join(', ')} WHERE id = $${i} RETURNING *`;
+
+    const result = await query(sql, values);
 
     if (!result.rows[0]) {
         return res.status(404).json({ error: 'Manufacturer not found.' });
     }
     res.json({ manufacturer: result.rows[0] });
-}));
-
-router.delete('/:id', asyncRoute(async (req, res) => {
-    const id = Number(req.params.id);
-    const result = await query('DELETE FROM manufacturers WHERE id = $1', [id]);
-    if (result.rowCount === 0) {
-        return res.status(404).json({ error: 'Manufacturer not found.' });
-    }
-    res.json({ ok: true });
 }));
 
 router.post('/:id/contacts', asyncRoute(async (req, res) => {
@@ -182,12 +176,6 @@ router.post('/:id/contacts', asyncRoute(async (req, res) => {
 
     const result = await query(sql, [manufacturerId, name, roleValue, emailValue, phoneValue, notesValue]);
     res.status(201).json({ contact: result.rows[0] });
-}));
-
-router.delete('/contacts/:contactId', asyncRoute(async (req, res) => {
-    const contactId = Number(req.params.contactId);
-    await query('DELETE FROM manufacturer_contacts WHERE id = $1', [contactId]);
-    res.json({ ok: true });
 }));
 
 router.post('/:id/communications', asyncRoute(async (req, res) => {

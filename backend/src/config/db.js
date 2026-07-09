@@ -32,6 +32,13 @@ function databaseSsl() {
     };
   }
 
+  if (env.isProduction) {
+    console.warn(
+      'WARNING: database TLS is unverified (rejectUnauthorized: false). ' +
+      'Set DATABASE_CA_CERT to the server CA to verify the connection.'
+    );
+  }
+
   return {
     rejectUnauthorized: false,
   };

@@ -35,7 +35,7 @@ function ExecKpiCards({ inventory, sales, revenue, shipping, alerts }) {
     if (revenue.data) {
         cards.push({
             key: 'revenue',
-            label: 'Revenue — this month',
+            label: 'Revenue — last 30 days',
             value: formatGBP(sumBy(revenue.data.daily, 'revenue')),
         });
     }
@@ -130,8 +130,9 @@ function Tile({ title, source, wide, children }) {
     );
 }
 
-// Loads one dashboard module's data when enabled.
-function useModule(path, enabled) {
+// Loads one dashboard module's data when enabled. Pass refreshMs to re-poll
+// in the background; a failed refresh keeps the last good data.
+function useModule(path, enabled, refreshMs) {
     const [state, setState] = useState({ loading: enabled, data: null, error: null });
 
     useEffect(() => {
@@ -140,18 +141,24 @@ function useModule(path, enabled) {
         // Skip state updates if the effect was cleaned up before the fetch resolved.
         let active = true;
 
-        api(path)
-            .then((data) => {
-                if (active) setState({ loading: false, data, error: null });
-            })
-            .catch((err) => {
-                if (active) setState({ loading: false, data: null, error: err.message });
-            });
+        const load = () => {
+            api(path)
+                .then((data) => {
+                    if (active) setState({ loading: false, data, error: null });
+                })
+                .catch((err) => {
+                    if (active) setState((s) => ({ loading: false, data: s.data, error: s.data ? null : err.message }));
+                });
+        };
+
+        load();
+        const timer = refreshMs ? setInterval(load, refreshMs) : null;
 
         return () => {
             active = false;
+            if (timer) clearInterval(timer);
         };
-    }, [path, enabled]);
+    }, [path, enabled, refreshMs]);
 
     return state;
 }
@@ -242,7 +249,7 @@ export default function Dashboard() {
     const productPerf = useModule('/dashboard/product-performance', canAccess('sales'));
     const customers = useModule('/dashboard/customers', canAccess('customers'));
     const revenue = useModule('/dashboard/revenue', canAccess('revenue'));
-    const shipping = useModule('/dashboard/shipping', canAccess('shipping'));
+    const shipping = useModule('/dashboard/shipping', canAccess('shipping'), 30000);
     const alerts = useModule('/dashboard/alerts-summary', canAccess('alerts'));
     const partners = useModule('/dashboard/partners', canAccess('partners'));
     const sync = useModule('/sync/status', canAccess('sync'));
@@ -453,7 +460,7 @@ export default function Dashboard() {
                 )}
 
                 {canAccess('shipping') && (
-                    <Tile title="Orders in transit" source="AfterShip">
+                    <Tile title="Orders in transit" source="Shopify">
                         <Body state={shipping}>
                             {(data) => (
                                 <>

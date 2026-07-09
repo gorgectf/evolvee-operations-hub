@@ -26,7 +26,9 @@ export function selectRows(rows, searchFields, query, sort) {
 
 export function toCsv(columns, rows) {
     const cell = (value) => {
-        const s = value == null ? '' : String(value);
+        let s = value == null ? '' : String(value);
+        // Neutralise spreadsheet formula injection: a leading =, +, -, @ can execute in Excel.
+        if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
 
         return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
     };

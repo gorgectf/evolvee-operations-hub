@@ -12,18 +12,27 @@ async function getCrmCustomers() {
         }
 
         const token = await getZohoAccessToken();
-
-        const url =
-            env.zoho.apiBase + '/crm/v6/Contacts' +
-            '?fields=Email,Lead_Source,Description' +
-            '&per_page=200';
-
         const options = {
             headers: { Authorization: 'Zoho-oauthtoken ' + token }
         };
-        const data = await callExternal(url, options);
 
-        const contacts = data.data || [];
+        // Page through all contacts; Zoho signals continuation via info.more_records.
+        const contacts = [];
+        for (let page = 1; ; page++) {
+            const url =
+                env.zoho.apiBase + '/crm/v6/Contacts' +
+                '?fields=Email,Lead_Source,Description' +
+                '&per_page=200&page=' + page;
+            const data = await callExternal(url, options);
+
+            for (const c of (data.data || [])) {
+                contacts.push(c);
+            }
+
+            if (!(data.info && data.info.more_records)) {
+                break;
+            }
+        }
 
         const customers = [];
         for (const c of contacts) {

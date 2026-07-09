@@ -34,6 +34,9 @@ export default function Login() {
             if (!res.ok) {
                 throw new Error(data.error || 'Sign in failed.');
             }
+            if (!data.token) {
+                throw new Error('Unexpected response — check VITE_API_BASE points to the backend.');
+            }
 
             setSession(data.token, data.user);
             navigate('/');

@@ -68,5 +68,9 @@ export async function api(path, options = {}) {
         throw new Error(data?.error || `Request failed (${response.status})`);
     }
 
+    if (data === null && response.status !== 204) {
+        throw new Error('Server did not return JSON — check VITE_API_BASE points to the backend.');
+    }
+
     return data;
 }

@@ -9,21 +9,14 @@ function getHost(url) {
     return parsed.host;
 }
 
-async function callExternal(url, options = {}, config = {}) {
-    const timeoutMs = config.timeoutMs ?? 15000;
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+async function attempt(url, options, config, timeoutMs) {
     const controller = new AbortController();
-
-    function abortRequest() {
-        controller.abort();
-    }
-
-    const timer = setTimeout(abortRequest, timeoutMs);
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-        const requestOptions = Object.assign({}, options);
-        requestOptions.signal = controller.signal;
-
+        const requestOptions = Object.assign({}, options, { signal: controller.signal });
         const response = await fetch(url, requestOptions);
 
         if (!response.ok) {
@@ -35,27 +28,37 @@ async function callExternal(url, options = {}, config = {}) {
             }
 
             const host = getHost(url);
-            const preview = body.slice(0, 200);
-            throw new Error(`HTTP ${response.status} from ${host}: ${preview}`);
+            const err = new Error(`HTTP ${response.status} from ${host}: ${body.slice(0, 200)}`);
+            err.status = response.status;
+            err.retryAfterMs = Number(response.headers.get('retry-after') || 0) * 1000;
+            throw err;
         }
 
         const json = await response.json();
-
-        if (config.includeHeaders) {
-            return { data: json, headers: response.headers };
-        }
-
-        return json;
+        return config.includeHeaders ? { data: json, headers: response.headers } : json;
     } catch (error) {
         if (error.name === 'AbortError') {
-            const host = getHost(url);
             const seconds = timeoutMs / 1000;
-            throw new Error(`Request to ${host} timed out after ${seconds}s`);
+            throw new Error(`Request to ${getHost(url)} timed out after ${seconds}s`);
         }
-
         throw error;
     } finally {
         clearTimeout(timer);
+    }
+}
+
+// ponytail: retry only on 429, once. Add exponential backoff / more retries if a provider needs it.
+async function callExternal(url, options = {}, config = {}) {
+    const timeoutMs = config.timeoutMs ?? 15000;
+
+    try {
+        return await attempt(url, options, config, timeoutMs);
+    } catch (error) {
+        if (error.status === 429) {
+            await wait(error.retryAfterMs > 0 ? error.retryAfterMs : 1000);
+            return attempt(url, options, config, timeoutMs);
+        }
+        throw error;
     }
 }
 
@@ -80,10 +83,10 @@ async function recordSync(source, mode, ok, message = null) {
     }
 }
 
-async function withSync(source, mode, run) {
+async function withSync(source, mode, run, offValue = []) {
     if (mode === 'off') {
         await recordSync(source, 'off', true);
-        return [];
+        return offValue;
     }
 
     try {
@@ -96,4 +99,4 @@ async function withSync(source, mode, run) {
     }
 }
 
-module.exports = { callExternal, recordSync, withSync };
+module.exports = { callExternal, withSync };

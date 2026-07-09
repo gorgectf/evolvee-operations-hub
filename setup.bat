@@ -10,7 +10,6 @@ call npm install || goto :err
 if not exist .env copy .env.example .env
 echo Review backend\.env (DATABASE_URL, JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD) before running setup if needed.
 call npm run db:reset || goto :err
-call npm run db:schema || goto :err
 call npm run db:seed:admin || goto :err
 
 echo === Frontend ===

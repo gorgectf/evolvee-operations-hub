@@ -3,23 +3,17 @@ const { query } = require('../config/db');
 const env = require('../config/env');
 const shopify = require('../services/integrations/shopify');
 
-// Skip if an open or acknowledged alert already exists for this product.
 async function alertIfLowStock(productId, currentStock, threshold) {
-    const existingAlert = await query(
-        `SELECT id FROM reorder_alerts WHERE product_id = $1 AND status IN ('open', 'acknowledged')`,
-        [productId]
-    );
-
-    if (existingAlert.rows.length > 0) {
-        return false;
-    }
-
-    await query(
-        `INSERT INTO reorder_alerts (product_id, stock_level, threshold) VALUES ($1, $2, $3)`,
+    const result = await query(
+        `INSERT INTO reorder_alerts (product_id, stock_level, threshold)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (product_id) WHERE status IN ('open', 'acknowledged')
+         DO NOTHING
+         RETURNING id`,
         [productId, currentStock, threshold]
     );
 
-    return true;
+    return result.rows.length > 0;
 }
 
 async function runStockCheck() {

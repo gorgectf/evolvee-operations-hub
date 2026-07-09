@@ -8,12 +8,11 @@ integration at a time as credentials arrive:
 ```
 SHOPIFY_MODE=sample          # sample | live
 ZOHO_CRM_MODE=sample
-AFTERSHIP_MODE=sample
 ```
 
 The QR partner dashboard is currently a placeholder
 
-Shopify drives sales, top customers, stock levels, and revenue (daily/weekly/monthly).
+Shopify drives sales, top customers, stock levels, revenue (daily/weekly/monthly), and shipping status (order fulfilment tracking).
 
 In sample mode the backend serves bundled JSON (in `backend/src/services/sampleData/`),
 so the whole UI works without any credentials.

@@ -39,4 +39,9 @@ assert.equal(
 );
 assert.equal(toCsv(csvCols, []), 'SKU,Note');
 
+assert.equal(
+    toCsv(csvCols, [{ sku: '=1+1', note: '@cmd' }]),
+    "SKU,Note\n'=1+1,'@cmd",
+);
+
 console.log('tableView self-check passed.');

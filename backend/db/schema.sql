@@ -107,6 +107,13 @@ CREATE TABLE IF NOT EXISTS production_runs (
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Reject non-positive quantities at the DB
+DO $$ BEGIN
+    ALTER TABLE production_runs
+        ADD CONSTRAINT production_runs_quantity_positive CHECK (quantity IS NULL OR quantity > 0);
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
 CREATE TABLE IF NOT EXISTS sync_status (
     source       TEXT PRIMARY KEY,
     mode         TEXT NOT NULL,
@@ -118,6 +125,9 @@ CREATE TABLE IF NOT EXISTS sync_status (
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_products_shopify_iid ON products(shopify_inventory_item_id);
 CREATE INDEX IF NOT EXISTS idx_alerts_status   ON reorder_alerts(status);
+-- At most one open/acknowledged alert per product, makes the stock-check insert race-safe.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_alerts_one_active
+    ON reorder_alerts(product_id) WHERE status IN ('open', 'acknowledged');
 CREATE INDEX IF NOT EXISTS idx_comms_mfr       ON communications(manufacturer_id);
 CREATE INDEX IF NOT EXISTS idx_runs_mfr        ON production_runs(manufacturer_id);
 CREATE INDEX IF NOT EXISTS idx_history_product ON reorder_history(product_id);

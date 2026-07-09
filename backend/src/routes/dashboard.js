@@ -4,7 +4,6 @@ const { authenticate, requirePermission } = require('../middleware/auth');
 const { asyncRoute } = require('../middleware/errorHandler');
 const shopify = require('../services/integrations/shopify');
 const zohoCrm = require('../services/integrations/zohoCrm');
-const aftership = require('../services/integrations/aftership');
 const { computeProductMetrics } = require('../services/productMetrics');
 
 const router = express.Router();
@@ -110,10 +109,10 @@ router.get('/customers', requirePermission('customers'), asyncRoute(async (req, 
         shopify.getCustomerPurchases()
     ]);
 
-    // Index CRM records by email to match Shopify customers.
+    // Index CRM records by lowercased email to match Shopify customers case-insensitively.
     const crmByEmail = {};
     for (const c of crm) {
-        crmByEmail[c.email] = c;
+        crmByEmail[(c.email || '').toLowerCase()] = c;
     }
 
     shop.sort(function (a, b) {
@@ -123,7 +122,7 @@ router.get('/customers', requirePermission('customers'), asyncRoute(async (req, 
 
     const customers = [];
     for (const c of topTen) {
-        const crmEntry = crmByEmail[c.email];
+        const crmEntry = crmByEmail[(c.email || '').toLowerCase()];
 
         let segment = '—';
         let crmNotes = '';
@@ -188,7 +187,7 @@ router.get('/revenue', requirePermission('revenue'), asyncRoute(async (req, res)
 }));
 
 router.get('/shipping', requirePermission('shipping'), asyncRoute(async (req, res) => {
-    const trackings = await aftership.getTrackings();
+    const trackings = await shopify.getTrackings();
 
     const byStatus = {};
     for (const t of trackings) {

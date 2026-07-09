@@ -1,13 +1,13 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { query } = require('../config/db');
-const { authenticate, requirePermission } = require('../middleware/auth');
+const { authenticate, requirePermission, ROLE_PERMISSIONS } = require('../middleware/auth');
 const { asyncRoute } = require('../middleware/errorHandler');
 
 const router = express.Router();
 router.use(authenticate, requirePermission('users'));
 
-const ROLES = ['admin', 'developer', 'ops_manager', 'marketing', 'partner'];
+const ROLES = Object.keys(ROLE_PERMISSIONS);
 
 async function activeAdminCount() {
     const result = await query(
@@ -108,9 +108,12 @@ router.patch('/:id', asyncRoute(async (req, res) => {
         return res.status(400).json({ error: 'You cannot deactivate your own account.' });
     }
 
-    if (fullName !== undefined) {
-        await query('UPDATE users SET full_name = $1 WHERE id = $2', [fullName, id]);
-    }
+    // One atomic UPDATE for whichever fields were sent (no partial writes on mid-failure).
+    const set = [];
+    const values = [];
+    let i = 1;
+
+    if (fullName !== undefined) { set.push(`full_name = $${i++}`); values.push(fullName); }
 
     if (email !== undefined) {
         const normalisedEmail = String(email).toLowerCase().trim();
@@ -121,21 +124,16 @@ router.patch('/:id', asyncRoute(async (req, res) => {
         if (clash.rows[0]) {
             return res.status(409).json({ error: 'Another user already has that email.' });
         }
-        await query('UPDATE users SET email = $1 WHERE id = $2', [normalisedEmail, id]);
+        set.push(`email = $${i++}`); values.push(normalisedEmail);
     }
 
-    if (role !== undefined) {
-        await query('UPDATE users SET role = $1 WHERE id = $2', [role, id]);
-    }
+    if (role !== undefined) { set.push(`role = $${i++}`); values.push(role); }
+    if (isActive !== undefined) { set.push(`is_active = $${i++}`); values.push(Boolean(isActive)); }
+    if (password !== undefined) { set.push(`password_hash = $${i++}`); values.push(bcrypt.hashSync(password, 10)); }
 
-    if (isActive !== undefined) {
-        const activeFlag = Boolean(isActive);
-        await query('UPDATE users SET is_active = $1 WHERE id = $2', [activeFlag, id]);
-    }
-
-    if (password !== undefined) {
-        const newHash = bcrypt.hashSync(password, 10);
-        await query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, id]);
+    if (set.length > 0) {
+        values.push(id);
+        await query(`UPDATE users SET ${set.join(', ')} WHERE id = $${i}`, values);
     }
 
     const updated = await query(
@@ -143,36 +141,6 @@ router.patch('/:id', asyncRoute(async (req, res) => {
         [id]
     );
     res.json({ user: updated.rows[0] });
-}));
-
-router.delete('/:id', asyncRoute(async (req, res) => {
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id)) {
-        return res.status(400).json({ error: 'Invalid user id.' });
-    }
-
-    if (id === req.user.id) {
-        return res.status(400).json({ error: 'You cannot delete your own account.' });
-    }
-
-    const existingResult = await query(
-        'SELECT id, role, is_active FROM users WHERE id = $1',
-        [id]
-    );
-    const current = existingResult.rows[0];
-    if (!current) {
-        return res.status(404).json({ error: 'User not found.' });
-    }
-
-    if (current.role === 'admin' && current.is_active) {
-        const admins = await activeAdminCount();
-        if (admins <= 1) {
-            return res.status(400).json({ error: 'This is the last active admin — promote another admin first.' });
-        }
-    }
-
-    await query('DELETE FROM users WHERE id = $1', [id]);
-    res.json({ deleted: true, id: id });
 }));
 
 module.exports = router;

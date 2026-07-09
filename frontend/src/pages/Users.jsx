@@ -10,6 +10,9 @@ export default function Users() {
     const [users, setUsers] = useState(null);
     const [error, setError] = useState('');
     const [form, setForm] = useState(EMPTY_FORM);
+    // Which user's password is being reset, and the value typed so far.
+    const [resetId, setResetId] = useState(null);
+    const [resetPwd, setResetPwd] = useState('');
     const { query, setQuery, view, sort, toggleSort } = useTableView(users, ['full_name', 'email', 'role']);
 
     function load() {
@@ -44,17 +47,25 @@ export default function Users() {
         }
     }
 
-    function resetPassword(user) {
-        const pwd = window.prompt(`New password for ${user.email} (min 8 chars):`);
-        if (pwd === null) {
-            return;
-        }
-        if (pwd.length < 8) {
+    function startReset(user) {
+        setError('');
+        setResetPwd('');
+        setResetId(user.id);
+    }
+
+    function cancelReset() {
+        setResetId(null);
+        setResetPwd('');
+    }
+
+    async function submitReset(user) {
+        if (resetPwd.length < 8) {
             setError('Password must be at least 8 characters.');
             return;
         }
         setError('');
-        patchUser(user.id, { password: pwd });
+        await patchUser(user.id, { password: resetPwd });
+        cancelReset();
     }
 
     function renderRoleOptions() {
@@ -93,9 +104,25 @@ export default function Users() {
                         {user.is_active ? 'Deactivate' : 'Reactivate'}
                     </button>
                     {' · '}
-                    <button className="link" onClick={() => resetPassword(user)}>
-                        Reset password
-                    </button>
+                    {resetId === user.id ? (
+                        <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                            <input
+                                type="password"
+                                autoComplete="new-password"
+                                placeholder="New password (min 8)"
+                                value={resetPwd}
+                                onChange={(e) => setResetPwd(e.target.value)}
+                                onKeyDown={onEnter(() => submitReset(user))}
+                                style={{ maxWidth: 170 }}
+                            />
+                            <button className="link" onClick={() => submitReset(user)}>Set</button>
+                            <button className="link" onClick={cancelReset}>Cancel</button>
+                        </span>
+                    ) : (
+                        <button className="link" onClick={() => startReset(user)}>
+                            Reset password
+                        </button>
+                    )}
                 </td>
             </tr>
         );

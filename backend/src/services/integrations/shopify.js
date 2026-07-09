@@ -67,9 +67,7 @@ async function getSalesOverview() {
             '&limit=250' +
             '&fields=line_items,total_price';
 
-        const data = await callExternal(url, { headers: headers() });
-
-        const orders = data.orders || [];
+        const orders = await fetchAllPages(url, 'orders');
 
         const bySku = {};
         for (const order of orders) {
@@ -117,7 +115,7 @@ async function getCustomerPurchases() {
         const orders = await fetchAllPages(url, 'orders');
 
         return aggregateCustomerPurchases(orders);
-    });
+    }, {});
 }
 
 async function getTopCustomers() {
@@ -161,16 +159,16 @@ async function getDailyRevenue() {
         const thirtyOneDaysMs = 31 * 864e5;
         const since = new Date(Date.now() - thirtyOneDaysMs).toISOString();
 
+        // financial_status=paid to match getMonthlyRevenue — both revenue views on one basis.
         const url =
             base() +
             '/orders.json?status=any' +
+            '&financial_status=paid' +
             '&created_at_min=' + since +
             '&limit=250' +
             '&fields=created_at,total_price';
 
-        const data = await callExternal(url, { headers: headers() });
-
-        const orders = data.orders || [];
+        const orders = await fetchAllPages(url, 'orders');
 
         const byDay = {};
         for (const o of orders) {
@@ -235,7 +233,7 @@ async function getSalesTrend() {
             out[sku] = days;
         }
         return out;
-    });
+    }, {});
 }
 
 async function getStockLevels() {
@@ -335,6 +333,63 @@ async function getTodayOrders() {
             orders_count: orders.length,
             sales_total: Number(salesTotal.toFixed(2))
         };
+    }, { orders_count: 0, sales_total: 0 });
+}
+
+const SHIPMENT_STATUS = {
+    confirmed: 'InfoReceived',
+    label_printed: 'Pending',
+    label_purchased: 'Pending',
+    ready_for_pickup: 'OutForDelivery',
+    in_transit: 'InTransit',
+    out_for_delivery: 'OutForDelivery',
+    attempted_delivery: 'Exception',
+    failure: 'Exception',
+    delivered: 'Delivered'
+};
+
+async function getTrackings() {
+    const mode = env.modes.shopify;
+
+    return withSync('shopify', mode, async () => {
+        if (mode === 'sample') {
+            return sample.trackings;
+        }
+
+        const since = new Date(Date.now() - 30 * 864e5).toISOString();
+
+        const url =
+            base() +
+            '/orders.json?status=any' +
+            '&created_at_min=' + since +
+            '&limit=250' +
+            '&fields=name,customer,fulfillments';
+
+        const orders = await fetchAllPages(url, 'orders');
+
+        const trackings = [];
+        for (const o of orders) {
+            const customer = o.customer
+                ? ((o.customer.first_name || '') + ' ' + (o.customer.last_name || '')).trim()
+                : '';
+
+            for (const f of (o.fulfillments || [])) {
+                if (!f.tracking_number) {
+                    continue;
+                }
+
+                trackings.push({
+                    tracking_number: f.tracking_number,
+                    order_id: o.name,
+                    courier: f.tracking_company || '',
+                    status: SHIPMENT_STATUS[f.shipment_status] || 'Pending',
+                    customer: customer,
+                    last_update: f.updated_at ? f.updated_at.slice(0, 10) : ''
+                });
+            }
+        }
+
+        return trackings;
     });
 }
 
@@ -380,4 +435,4 @@ async function getMonthlyRevenue() {
     });
 }
 
-module.exports = { getSalesOverview, getTopCustomers, getCustomerPurchases, getDailyRevenue, getStockLevels, getMonthlyRevenue, getTodayOrders, getSalesTrend };
+module.exports = { getSalesOverview, getTopCustomers, getCustomerPurchases, getDailyRevenue, getStockLevels, getMonthlyRevenue, getTodayOrders, getSalesTrend, getTrackings };

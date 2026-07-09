@@ -72,8 +72,7 @@ const env = {
 
     modes: {
         shopify: envOr('SHOPIFY_MODE', 'off'),
-        zohoCrm: envOr('ZOHO_CRM_MODE', 'off'),
-        aftership: envOr('AFTERSHIP_MODE', 'off')
+        zohoCrm: envOr('ZOHO_CRM_MODE', 'off')
     },
 
     shopify: {
@@ -87,13 +86,7 @@ const env = {
         clientSecret: envOr('ZOHO_CLIENT_SECRET', ''),
         refreshToken: envOr('ZOHO_REFRESH_TOKEN', ''),
         accountsBase: envOr('ZOHO_ACCOUNTS_BASE', 'https://accounts.zoho.com'),
-        apiBase: envOr('ZOHO_API_BASE', 'https://www.zohoapis.com'),
-        organizationId: envOr('ZOHO_ORGANIZATION_ID', '')
-    },
-
-    aftership: {
-        apiKey: envOr('AFTERSHIP_API_KEY', ''),
-        webhookSecret: envOr('AFTERSHIP_WEBHOOK_SECRET', '')
+        apiBase: envOr('ZOHO_API_BASE', 'https://www.zohoapis.com')
     }
 };
 
