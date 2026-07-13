@@ -83,6 +83,28 @@ async function recordSync(source, mode, ok, message = null) {
     }
 }
 
+const CACHE_TTL_MS = Number(process.env.INTEGRATION_CACHE_TTL_MS || 60000);
+const cacheStore = new Map();
+
+function cached(key, fn) {
+    const hit = cacheStore.get(key);
+    if (hit && Date.now() - hit.at < CACHE_TTL_MS) {
+        return hit.value;
+    }
+    const value = Promise.resolve().then(fn);
+    cacheStore.set(key, { at: Date.now(), value });
+    value.catch(() => cacheStore.delete(key));
+    return value;
+}
+
+function cacheAll(source, fns) {
+    const out = {};
+    for (const name of Object.keys(fns)) {
+        out[name] = () => cached(source + ':' + name, fns[name]);
+    }
+    return out;
+}
+
 async function withSync(source, mode, run, offValue = []) {
     if (mode === 'off') {
         await recordSync(source, 'off', true);
@@ -99,4 +121,22 @@ async function withSync(source, mode, run, offValue = []) {
     }
 }
 
-module.exports = { callExternal, withSync };
+if (require.main === module) {
+    const assert = require('assert');
+    (async () => {
+        let calls = 0;
+        const slow = () => new Promise((r) => setTimeout(() => r(++calls), 10));
+        const [a, b] = await Promise.all([cached('k', slow), cached('k', slow)]);
+        assert.strictEqual(a, 1);
+        assert.strictEqual(b, 1);
+        assert.strictEqual(calls, 1);
+
+        let boom = 0;
+        await cached('e', () => Promise.reject(new Error('x'))).catch(() => {});
+        await cached('e', () => Promise.resolve(++boom));
+        assert.strictEqual(boom, 1);
+        console.log('apiClient cache self-check passed.');
+    })();
+}
+
+module.exports = { callExternal, withSync, cached, cacheAll };

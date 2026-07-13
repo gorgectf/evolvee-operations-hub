@@ -1,5 +1,5 @@
 const env = require('../../config/env');
-const { callExternal, withSync } = require('../apiClient');
+const { callExternal, withSync, cacheAll } = require('../apiClient');
 const { aggregateCustomerPurchases } = require('../customerPurchases');
 const sample = require('../sampleData/shopify.json');
 
@@ -282,20 +282,25 @@ async function getStockLevels() {
 
         // inventory_levels caps ids per request, so query in chunks of 50.
         const itemIds = Object.keys(itemToSku);
+        const chunks = [];
         for (let i = 0; i < itemIds.length; i += 50) {
-            const chunk = itemIds.slice(i, i + 50);
+            chunks.push(itemIds.slice(i, i + 50));
+        }
 
-            const levelsUrl =
-                base() +
-                '/inventory_levels.json?inventory_item_ids=' + chunk.join(',') +
-                '&limit=250';
+        const fetchChunk = (chunk) => fetchAllPages(
+            base() + '/inventory_levels.json?inventory_item_ids=' + chunk.join(',') + '&limit=250',
+            'inventory_levels'
+        );
 
-            const levels = await fetchAllPages(levelsUrl, 'inventory_levels');
-
-            for (const lvl of levels) {
-                const sku = itemToSku[lvl.inventory_item_id];
-                if (sku && bySku[sku]) {
-                    bySku[sku].stock_on_hand += Number(lvl.available || 0);
+        const CONCURRENCY = 4;
+        for (let i = 0; i < chunks.length; i += CONCURRENCY) {
+            const batches = await Promise.all(chunks.slice(i, i + CONCURRENCY).map(fetchChunk));
+            for (const levels of batches) {
+                for (const lvl of levels) {
+                    const sku = itemToSku[lvl.inventory_item_id];
+                    if (sku && bySku[sku]) {
+                        bySku[sku].stock_on_hand += Number(lvl.available || 0);
+                    }
                 }
             }
         }
@@ -435,4 +440,4 @@ async function getMonthlyRevenue() {
     });
 }
 
-module.exports = { getSalesOverview, getTopCustomers, getCustomerPurchases, getDailyRevenue, getStockLevels, getMonthlyRevenue, getTodayOrders, getSalesTrend, getTrackings };
+module.exports = cacheAll('shopify', { getSalesOverview, getTopCustomers, getCustomerPurchases, getDailyRevenue, getStockLevels, getMonthlyRevenue, getTodayOrders, getSalesTrend, getTrackings });

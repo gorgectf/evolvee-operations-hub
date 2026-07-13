@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { compareValues, selectRows, toCsv } from './tableView.js';
+import { compareValues, selectRows, toCsv } from '../../frontend/src/tableView.js';
 
 assert.ok(compareValues(2, 10) < 0, 'numbers compare numerically');
 assert.ok(compareValues('ER-2', 'ER-10') < 0, 'numeric strings sort naturally');

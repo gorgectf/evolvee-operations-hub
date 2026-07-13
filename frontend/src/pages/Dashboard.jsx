@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, getUser } from '../api.js';
 import { useTableView, SortHeader, ExportButton, CopyText } from '../ui.jsx';
+import { applyOrder, dropBefore, reorder } from '../dashboardOrder.js';
 import {
     ResponsiveContainer,
     LineChart,
@@ -119,15 +120,80 @@ function ExecKpiCards({ inventory, sales, revenue, shipping, alerts }) {
     );
 }
 
-function Tile({ title, source, wide, children }) {
+function Tile({ id, title, source, wide, drag, children }) {
+    // `drag` is null when the layout is locked; the tile renders inert.
+
+    const active = Boolean(drag);
+    const cls =
+        `tile${wide ? ' wide' : ''}` +
+        (drag?.dragging ? ' dragging' : '') +
+        (drag?.over === 'before' ? ' drop-before' : '') +
+        (drag?.over === 'after' ? ' drop-after' : '');
+
     return (
-        <section className={`tile${wide ? ' wide' : ''}`}>
+        <section className={cls} data-tile-id={id}>
             <h2>
+                {active && (
+                    <button
+                        type="button"
+                        className="tile-grip"
+                        title="Drag to reorder"
+                        aria-label={`Drag to reorder ${title}`}
+                        onPointerDown={(e) => drag.onPointerDown(id, e)}
+                        onPointerMove={drag.onPointerMove}
+                        onPointerUp={drag.onPointerUp}
+                        onPointerCancel={drag.onPointerUp}
+                    >
+                        ⠿
+                    </button>
+                )}
                 {title} {source && <span className="src">{source}</span>}
             </h2>
             {children}
         </section>
     );
+}
+
+// Layout persistence + lock, in localStorage. Falls back to defaults if
+// storage is unavailable (private mode, quota).
+const ORDER_KEY = 'dashboard-tile-order';
+const LOCK_KEY = 'dashboard-locked';
+
+function load(key, fallback) {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw == null ? fallback : JSON.parse(raw);
+    } catch {
+        return fallback;
+    }
+}
+
+function save(key, value) {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+    } catch { /* ignore */ }
+}
+
+function useDashboardLayout() {
+    const [order, setOrderState] = useState(() => load(ORDER_KEY, []));
+    const [locked, setLockedState] = useState(() => load(LOCK_KEY, true));
+
+    const setOrder = (next) => {
+        setOrderState(next);
+        save(ORDER_KEY, next);
+    };
+    const setLocked = (next) => {
+        setLockedState(next);
+        save(LOCK_KEY, next);
+    };
+    const reset = () => {
+        setOrderState([]);
+        try {
+            localStorage.removeItem(ORDER_KEY);
+        } catch { /* ignore */ }
+    };
+
+    return { order, setOrder, locked, setLocked, reset };
 }
 
 // Loads one dashboard module's data when enabled. Pass refreshMs to re-poll
@@ -254,33 +320,24 @@ export default function Dashboard() {
     const partners = useModule('/dashboard/partners', canAccess('partners'));
     const sync = useModule('/sync/status', canAccess('sync'));
 
-    // Sources that failed their most recent sync.
+    // Sources that failed their most recent sync
     const failedSources = (sync.data?.sources || []).filter((source) => source.ok === false);
 
-    return (
-        <>
-            <h1>Operations dashboard</h1>
-            <p className="sub">
-                A single view of stock, sales, customers, revenue, and deliveries.
-            </p>
+    const layout = useDashboardLayout();
+    const { order, setOrder, locked, setLocked, reset } = layout;
 
-            {failedSources.length > 0 && (
-                <div className="banner error">
-                    Data sync issue — the following sources failed their last update and may
-                    be showing older data: {failedSources.map((source) => source.source).join(', ')}.
-                </div>
-            )}
+    // Transient drag state (not persisted). `over` = { id, before }
+    const [dragId, setDragId] = useState(null);
+    const [over, setOver] = useState(null);
+    const clearDrag = () => {
+        setDragId(null);
+        setOver(null);
+    };
 
-            <ExecKpiCards
-                inventory={inventory}
-                sales={sales}
-                revenue={revenue}
-                shipping={shipping}
-                alerts={alerts}
-            />
-
-            <div className="grid">
-                {canAccess('alerts') && (
+    // Build the visible tiles as { id, el }, then apply the saved order
+    const defs = [];
+    if (canAccess('alerts')) {
+        defs.push({ id: 'alerts', el: (
                     <Tile title="Reorder alerts" source="Manufacturer tool">
                         <Body state={alerts}>
                             {(data) => {
@@ -322,9 +379,10 @@ export default function Dashboard() {
                             }}
                         </Body>
                     </Tile>
-                )}
-
-                {canAccess('inventory') && (
+        ) });
+    }
+    if (canAccess('inventory')) {
+        defs.push({ id: 'inventory', el: (
                     <Tile title="Stock levels" source="Shopify">
                         <Body state={inventory}>
                             {(data) => (
@@ -343,9 +401,10 @@ export default function Dashboard() {
                             )}
                         </Body>
                     </Tile>
-                )}
-
-                {canAccess('sales') && (
+        ) });
+    }
+    if (canAccess('sales')) {
+        defs.push({ id: 'product-sales', el: (
                     <Tile title="Product sales — last 30 days" source="Shopify">
                         <Body state={sales}>
                             {(data) => (
@@ -398,9 +457,10 @@ export default function Dashboard() {
                             )}
                         </Body>
                     </Tile>
-                )}
-
-                {canAccess('sales') && (
+        ) });
+    }
+    if (canAccess('sales')) {
+        defs.push({ id: 'product-performance', el: (
                     <Tile title="Product performance — last 30 days" source="Shopify" wide>
                         <Body state={productPerf}>
                             {(data) => (
@@ -422,9 +482,10 @@ export default function Dashboard() {
                             )}
                         </Body>
                     </Tile>
-                )}
-
-                {canAccess('customers') && (
+        ) });
+    }
+    if (canAccess('customers')) {
+        defs.push({ id: 'customers', el: (
                     <Tile title="Top customers" source="Shopify + Zoho CRM">
                         <Body state={customers}>
                             {(data) => (
@@ -457,9 +518,10 @@ export default function Dashboard() {
                             )}
                         </Body>
                     </Tile>
-                )}
-
-                {canAccess('shipping') && (
+        ) });
+    }
+    if (canAccess('shipping')) {
+        defs.push({ id: 'shipping', el: (
                     <Tile title="Orders in transit" source="Shopify">
                         <Body state={shipping}>
                             {(data) => (
@@ -486,17 +548,19 @@ export default function Dashboard() {
                             )}
                         </Body>
                     </Tile>
-                )}
-
-                {canAccess('partners') && (
+        ) });
+    }
+    if (canAccess('partners')) {
+        defs.push({ id: 'partners', el: (
                     <Tile title="Partners & commissions" source="QR partner dashboard">
                         <Body state={partners}>
                             {(data) => <p className="empty">{data.message}</p>}
                         </Body>
                     </Tile>
-                )}
-
-                {canAccess('revenue') && (
+        ) });
+    }
+    if (canAccess('revenue')) {
+        defs.push({ id: 'revenue', el: (
                     <Tile title="Revenue" source="Shopify" wide>
                         <Body state={revenue}>
                             {(data) => (
@@ -553,6 +617,88 @@ export default function Dashboard() {
                             )}
                         </Body>
                     </Tile>
+        ) });
+    }
+
+    const ordered = applyOrder(defs, order);
+    const orderedIds = ordered.map((d) => d.id);
+
+    const onPointerDown = (id, e) => {
+        e.currentTarget.setPointerCapture(e.pointerId); // route move/up here even off-tile
+        setDragId(id);
+    };
+    const onPointerMove = (e) => {
+        if (dragId == null) return;
+
+        const tile = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-tile-id]');
+
+        if (!tile) return;
+
+        const id = tile.dataset.tileId;
+        const before = dropBefore(tile.getBoundingClientRect(), e.clientX, e.clientY);
+
+        if (!over || over.id !== id || over.before !== before) setOver({ id, before });
+    };
+    const onPointerUp = () => {
+        if (dragId != null && over && over.id !== dragId) {
+            setOrder(reorder(orderedIds, dragId, over.id, over.before));
+        }
+
+        clearDrag();
+    };
+    const makeDrag = (id) =>
+        locked
+            ? null
+            : {
+                  dragging: dragId === id,
+                  over:
+                      over && over.id === id && dragId !== id
+                          ? over.before ? 'before' : 'after'
+                          : null,
+                  onPointerDown,
+                  onPointerMove,
+                  onPointerUp,
+              };
+
+    return (
+        <>
+            <h1>Operations dashboard</h1>
+            <p className="sub">
+                A single view of stock, sales, customers, revenue, and deliveries.
+            </p>
+
+            {failedSources.length > 0 && (
+                <div className="banner error">
+                    Data sync issue — the following sources failed their last update and may
+                    be showing older data: {failedSources.map((source) => source.source).join(', ')}.
+                </div>
+            )}
+
+            <ExecKpiCards
+                inventory={inventory}
+                sales={sales}
+                revenue={revenue}
+                shipping={shipping}
+                alerts={alerts}
+            />
+
+            <div className="toolbar dash-tools">
+                <button type="button" onClick={() => setLocked(!locked)}>
+                    {locked ? 'Rearrange tiles' : 'Lock layout'}
+                </button>
+                {!locked && (
+                    <span className="dash-hint">Drag the ⠿ handle to reorder tiles.</span>
+                )}
+                {order.length > 0 && (
+                    <button type="button" className="link" onClick={reset}>
+                        Reset order
+                    </button>
+                )}
+            </div>
+
+            <div className="grid">
+                {ordered.map((d) =>
+                    React.cloneElement(d.el, { key: d.id, id: d.id, drag: makeDrag(d.id) }),
                 )}
             </div>
         </>

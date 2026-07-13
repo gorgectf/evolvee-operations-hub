@@ -1,5 +1,5 @@
 const env = require('../../config/env');
-const { callExternal, withSync } = require('../apiClient');
+const { callExternal, withSync, cached } = require('../apiClient');
 const sample = require('../sampleData/shopify.json');
 
 function graphqlUrl() {
@@ -53,4 +53,4 @@ async function getReviews() {
     });
 }
 
-module.exports = { getReviews, mapReview };
+module.exports = { getReviews: () => cached('shopify:getReviews', getReviews), mapReview };

@@ -1,5 +1,5 @@
 const env = require('../../config/env');
-const { callExternal, withSync } = require('../apiClient');
+const { callExternal, withSync, cached } = require('../apiClient');
 const { getZohoAccessToken } = require('./zohoAuth');
 const sample = require('../sampleData/zohoCrm.json');
 
@@ -48,4 +48,4 @@ async function getCrmCustomers() {
     });
 }
 
-module.exports = { getCrmCustomers };
+module.exports = { getCrmCustomers: () => cached('zoho_crm:getCrmCustomers', getCrmCustomers) };

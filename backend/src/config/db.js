@@ -19,7 +19,7 @@ function databaseSsl() {
     return false;
   }
 
-  if (override !== 'true' && isLocalhost(env.databaseUrl)) {
+  if (override !== 'true' && override !== 'no-verify' && isLocalhost(env.databaseUrl)) {
     return false;
   }
 
@@ -32,10 +32,14 @@ function databaseSsl() {
     };
   }
 
+  if (override === 'no-verify') {
+    return { rejectUnauthorized: false };
+  }
+
   if (env.isProduction) {
-    console.warn(
-      'WARNING: database TLS is unverified (rejectUnauthorized: false). ' +
-      'Set DATABASE_CA_CERT to the server CA to verify the connection.'
+    throw new Error(
+      'Refusing an unverified database TLS connection in production. ' +
+      'Set DATABASE_CA_CERT to the server CA to verify it, or DATABASE_SSL=no-verify to explicitly allow an unverified connection.'
     );
   }
 

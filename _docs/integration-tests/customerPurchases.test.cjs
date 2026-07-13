@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { aggregateCustomerPurchases } = require('./customerPurchases.js');
+const { aggregateCustomerPurchases } = require('../../backend/src/services/customerPurchases.js');
 
 function test() {
     const orders = [
