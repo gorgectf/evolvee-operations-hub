@@ -15,7 +15,7 @@ import {
 } from 'recharts';
 
 function formatGBP(amount) {
-    return '£' + Number(amount).toLocaleString('en-GB', {
+    return '$' + Number(amount).toLocaleString('en-GB', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });

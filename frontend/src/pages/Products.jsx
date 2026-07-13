@@ -210,7 +210,7 @@ export default function Products() {
                         type="number"
                         min="0"
                         step="0.01"
-                        placeholder="Unit cost £"
+                        placeholder="Unit cost $"
                         value={form.unit_cost}
                         onChange={(e) => updateForm('unit_cost', e.target.value)}
                         onKeyDown={onEnter(createProduct)}
@@ -242,7 +242,7 @@ export default function Products() {
                                 <SortHeader label="Product" sortKey="name" sort={sort} toggleSort={toggleSort} />
                                 <SortHeader label="Manufacturer" sortKey="manufacturer_name" sort={sort} toggleSort={toggleSort} />
                                 <SortHeader label="Reorder threshold" sortKey="threshold" sort={sort} toggleSort={toggleSort} className="num" />
-                                <SortHeader label="Unit cost (£)" sortKey="unit_cost" sort={sort} toggleSort={toggleSort} className="num" />
+                                <SortHeader label="Unit cost ($)" sortKey="unit_cost" sort={sort} toggleSort={toggleSort} className="num" />
                                 <th />
                             </tr>
                         </thead>
