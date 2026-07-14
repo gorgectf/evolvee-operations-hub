@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, getUser } from '../api.js';
-import { useTableView, SortHeader, ExportButton, CopyText } from '../ui.jsx';
+import { api, getEffectivePermissions } from '../api.js';
+import { useTableView, SortHeader, SearchBox, ExportButton, CopyText } from '../ui.jsx';
 import { applyOrder, dropBefore, reorder } from '../dashboardOrder.js';
 import {
     ResponsiveContainer,
@@ -243,6 +243,18 @@ function Body({ state, children }) {
     return children(state.data);
 }
 
+const ALERTS_SEEN_KEY = 'alerts-seen-count';
+
+function NewAlertsBadge({ count }) {
+    const [seen] = useState(() => load(ALERTS_SEEN_KEY, null));
+    useEffect(() => { save(ALERTS_SEEN_KEY, count); }, [count]);
+
+    const delta = seen == null ? 0 : count - seen;
+    if (delta <= 0) return null;
+
+    return <span className="pill low" style={{ marginLeft: 8 }}>▲ {delta} new</span>;
+}
+
 function stockPill(isLowStock) {
     if (isLowStock) return <span className="pill low">Low</span>;
 
@@ -256,14 +268,20 @@ function shippingStatusClass(status) {
     return 'info';
 }
 
-function DataTable({ columns, rows, filename, limit, copyKey, keyField = 'id' }) {
-    const { view, sort, toggleSort } = useTableView(rows, []);
-    const shown = limit ? view.slice(0, limit) : view;
+function DataTable({ columns, rows, filename, limit, copyKey, keyField = 'id', search }) {
+    const searchFields = search || columns.map((c) => c.key);
+    const { query, setQuery, view, sort, toggleSort } = useTableView(rows, searchFields);
+    const shown = limit && !query ? view.slice(0, limit) : view;
     const csvColumns = columns.map((c) => ({ label: c.label, get: (row) => row[c.key] }));
+    const showSearch = (rows?.length || 0) > (limit || 8);
 
     return (
         <>
-            <div className="toolbar" style={{ justifyContent: 'flex-end', marginBottom: 8 }}>
+            <div
+                className="toolbar"
+                style={{ justifyContent: showSearch ? 'space-between' : 'flex-end', marginBottom: 8 }}
+            >
+                {showSearch && <SearchBox query={query} setQuery={setQuery} />}
                 <ExportButton filename={filename} columns={csvColumns} rows={view} />
             </div>
             <div className="table-scroll">
@@ -304,10 +322,10 @@ function DataTable({ columns, rows, filename, limit, copyKey, keyField = 'id' })
 }
 
 export default function Dashboard() {
-    const user = getUser();
+    const permissions = getEffectivePermissions();
 
     function canAccess(permission) {
-        return user?.permissions?.includes(permission);
+        return permissions.includes(permission);
     }
 
     const inventory = useModule('/dashboard/inventory', canAccess('inventory'));
@@ -355,7 +373,10 @@ export default function Dashboard() {
                                                 <div className="v" style={{ color: 'var(--bad)' }}>
                                                     {data.open_count}
                                                 </div>
-                                                <div className="l">SKUs / item IDs need reordering</div>
+                                                <div className="l">
+                                                    SKUs / item IDs need reordering
+                                                    <NewAlertsBadge count={data.open_count} />
+                                                </div>
                                             </div>
                                         </div>
                                         <DataTable

@@ -1,6 +1,15 @@
 import React from 'react';
 import { Routes, Route, NavLink, Navigate, useNavigate, Outlet } from 'react-router-dom';
-import { getUser, getToken, clearSession } from './api.js';
+import {
+    getUser,
+    getToken,
+    clearSession,
+    getEffectivePermissions,
+    getViewAsRole,
+    setViewAsRole,
+    viewableRoles,
+    getTokenExp,
+} from './api.js';
 import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Manufacturers from './pages/Manufacturers.jsx';
@@ -29,12 +38,87 @@ function ThemeToggle() {
     );
 }
 
+function ViewAsControl() {
+    const user = getUser();
+    const roles = viewableRoles();
+    if (roles.length === 0) return null;
+
+    const current = getViewAsRole() || user.role;
+    const change = (e) => {
+        const value = e.target.value;
+        setViewAsRole(value === user.role ? null : value);
+        window.location.reload();
+    };
+
+    return (
+        <label className="view-as" title="Preview the app as another role (view only)">
+            View as{' '}
+            <select value={current} onChange={change}>
+                <option value={user.role}>{user.role.replace('_', ' ')} (you)</option>
+                {roles.map((r) => (
+                    <option key={r} value={r}>{r.replace('_', ' ')}</option>
+                ))}
+            </select>
+        </label>
+    );
+}
+
+function ImpersonationBanner() {
+    const viewAs = getViewAsRole();
+    if (!viewAs) return null;
+
+    const exit = () => {
+        setViewAsRole(null);
+        window.location.reload();
+    };
+
+    return (
+        <div className="banner warn">
+            Viewing as <strong>{viewAs.replace('_', ' ')}</strong> — this only changes what
+            you see, not what you can do.{' '}
+            <button className="link" onClick={exit}>Exit preview</button>
+        </div>
+    );
+}
+
+function SessionWatcher() {
+    const navigate = useNavigate();
+    const [warn, setWarn] = React.useState(false);
+
+    React.useEffect(() => {
+        const exp = getTokenExp();
+        if (!exp) return;
+
+        const msLeft = exp * 1000 - Date.now();
+        if (msLeft <= 0 || msLeft > 2147483647) return;
+
+        const warnLead = 2 * 60 * 1000;
+        const warnTimer = setTimeout(() => setWarn(true), Math.max(0, msLeft - warnLead));
+        const outTimer = setTimeout(() => {
+            clearSession();
+            navigate('/login');
+        }, msLeft);
+
+        return () => {
+            clearTimeout(warnTimer);
+            clearTimeout(outTimer);
+        };
+    }, [navigate]);
+
+    if (!warn) return null;
+
+    return (
+        <div className="banner warn">
+            Your session is about to expire. Save your work and sign in again to continue.
+        </div>
+    );
+}
+
 // App frame: top nav plus the active route.
 function Shell() {
     const user = getUser();
     const navigate = useNavigate();
-    // True if the current user holds permission p.
-    const can = (p) => user?.permissions?.includes(p);
+    const can = (p) => getEffectivePermissions().includes(p);
 
     // No token means not signed in.
     if (!getToken()) {
@@ -83,6 +167,7 @@ function Shell() {
                         <span>
                             {user?.name} · {user?.role?.replace('_', ' ')}
                         </span>
+                        <ViewAsControl />
                         <NavLink to="/account">Account</NavLink>
                         <ThemeToggle />
                         <button
@@ -97,6 +182,8 @@ function Shell() {
                 </div>
             </header>
             <main className="page">
+                <ImpersonationBanner />
+                <SessionWatcher />
                 <Outlet />
             </main>
         </>

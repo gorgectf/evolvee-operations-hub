@@ -1,8 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const env = require('./config/env');
+const { query } = require('./config/db');
 const { errorHandler } = require('./middleware/errorHandler');
-const { scheduleStockCheck, runStockCheck } = require('./jobs/stockCheck');
+const { scheduleStockCheck, runStockCheck, getLastStockCheck } = require('./jobs/stockCheck');
 const { ensureSchema } = require('../db/applySchema');
 const { seed } = require('../db/seed');
 const { seedAdmin } = require('../db/seedAdmin');
@@ -23,8 +24,31 @@ function isAllowedOrigin(origin, callback) {
 app.use(cors({ origin: isAllowedOrigin }));
 app.use(express.json());
 
-app.get('/api/health', function (req, res) {
-    res.json({ ok: true, time: new Date().toISOString() });
+app.get('/api/health', async function (req, res) {
+    const sc = getLastStockCheck();
+    const health = {
+        ok: true,
+        time: new Date().toISOString(),
+        stock_check: sc && {
+            ran_at: sc.ran_at,
+            ok: sc.ok,
+            checked: sc.checked,
+            alerts_created: sc.alerts_created,
+        },
+    };
+
+    try {
+        const result = await query(
+            'SELECT source, ok, last_run_at, last_success FROM sync_status ORDER BY source'
+        );
+        health.sources = result.rows;
+        health.degraded = result.rows.some(function (r) { return r.ok === false; });
+    } catch (err) {
+        health.ok = false;
+        health.db_ok = false;
+    }
+
+    res.status(health.ok ? 200 : 503).json(health);
 });
 
 app.use('/api/auth', require('./routes/auth'));
@@ -35,6 +59,7 @@ app.use('/api/products', require('./routes/products'));
 app.use('/api/alerts', require('./routes/alerts'));
 app.use('/api/production-runs', require('./routes/productionRuns'));
 app.use('/api/sync', require('./routes/sync'));
+app.use('/api/audit', require('./routes/audit'));
 
 app.use(function (req, res) {
     res.status(404).json({ error: 'No route: ' + req.method + ' ' + req.originalUrl });

@@ -3,6 +3,7 @@ const { query } = require('../config/db');
 const { authenticate, requirePermission } = require('../middleware/auth');
 const { asyncRoute } = require('../middleware/errorHandler');
 const { validateId } = require('../middleware/validateId');
+const { recordAudit } = require('../services/audit');
 
 const router = express.Router();
 router.use(authenticate, requirePermission('manufacturers'));
@@ -18,7 +19,9 @@ router.get('/', asyncRoute(async (req, res) => {
         "       AND pr.status IN ('ordered', 'in_production', 'shipped')) AS active_runs, " +
         '    (SELECT ROUND(AVG(EXTRACT(EPOCH FROM (pr.updated_at - pr.created_at)) / 86400.0)::numeric, 1) ' +
         '     FROM production_runs pr ' +
-        "     WHERE pr.manufacturer_id = m.id AND pr.status = 'received') AS avg_production_days " +
+        "     WHERE pr.manufacturer_id = m.id AND pr.status = 'received') AS avg_production_days, " +
+        '    (SELECT MAX(c.logged_at) FROM communications c ' +
+        '     WHERE c.manufacturer_id = m.id) AS last_contacted ' +
         'FROM manufacturers m ' +
         'ORDER BY m.name';
 
@@ -114,6 +117,12 @@ router.post('/', asyncRoute(async (req, res) => {
         'VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
         [name, countryValue, notesValue, leadTimeValue, moqValue, paymentTermsValue, qualityValue]
     );
+
+    await recordAudit(req, {
+        action: 'create', entity: 'manufacturer', entityId: result.rows[0].id,
+        details: { name },
+    });
+
     res.status(201).json({ manufacturer: result.rows[0] });
 }));
 
@@ -125,8 +134,9 @@ router.patch('/:id', asyncRoute(async (req, res) => {
     // (COALESCE couldn't tell "omitted" from "cleared", so clearing never worked.)
     const set = [];
     const values = [];
+    const changed = {};
     let i = 1;
-    const put = (col, val) => { set.push(`${col} = $${i++}`); values.push(val); };
+    const put = (col, val) => { set.push(`${col} = $${i++}`); values.push(val); changed[col] = val; };
     const numOrNull = (v) => (v === '' || v == null ? null : v);
 
     if ('name' in body) put('name', body.name);
@@ -150,6 +160,11 @@ router.patch('/:id', asyncRoute(async (req, res) => {
     if (!result.rows[0]) {
         return res.status(404).json({ error: 'Manufacturer not found.' });
     }
+
+    await recordAudit(req, {
+        action: 'update', entity: 'manufacturer', entityId: id, details: changed,
+    });
+
     res.json({ manufacturer: result.rows[0] });
 }));
 

@@ -123,6 +123,17 @@ CREATE TABLE IF NOT EXISTS sync_status (
     message      TEXT
 );
 
+CREATE TABLE IF NOT EXISTS audit_log (
+    id         SERIAL PRIMARY KEY,
+    user_id    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    user_name  TEXT,
+    action     TEXT NOT NULL,
+    entity     TEXT NOT NULL,
+    entity_id  INTEGER,
+    details    JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_products_shopify_iid ON products(shopify_inventory_item_id);
 CREATE INDEX IF NOT EXISTS idx_alerts_status   ON reorder_alerts(status);
 -- At most one open/acknowledged alert per product, makes the stock-check insert race-safe.
@@ -131,3 +142,4 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_alerts_one_active
 CREATE INDEX IF NOT EXISTS idx_comms_mfr       ON communications(manufacturer_id);
 CREATE INDEX IF NOT EXISTS idx_runs_mfr        ON production_runs(manufacturer_id);
 CREATE INDEX IF NOT EXISTS idx_history_product ON reorder_history(product_id);
+CREATE INDEX IF NOT EXISTS idx_audit_created   ON audit_log(created_at DESC);

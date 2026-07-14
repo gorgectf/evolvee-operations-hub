@@ -430,6 +430,24 @@ label {
     color: var(--accent-deep);
 }
 
+.banner.warn {
+    background: color-mix(in srgb, var(--warn) 22%, transparent);
+    color: var(--ink);
+}
+
+.view-as {
+    font-size: 13px;
+    color: var(--muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.view-as select {
+    font-size: 13px;
+    padding: 2px 4px;
+}
+
 .empty {
     color: var(--muted);
     font-size: 14px;
@@ -448,6 +466,17 @@ label {
     display: flex;
     gap: 6px;
     flex-wrap: wrap;
+}
+
+.bulk-bar {
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+    border-radius: var(--radius);
+    padding: 8px 12px;
+    margin-bottom: 12px;
+}
+
+.bulk-bar .bulk-sep {
+    color: var(--muted);
 }
 
 input.search {

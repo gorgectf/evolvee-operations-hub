@@ -39,7 +39,12 @@ async function attempt(url, options, config, timeoutMs) {
     } catch (error) {
         if (error.name === 'AbortError') {
             const seconds = timeoutMs / 1000;
-            throw new Error(`Request to ${getHost(url)} timed out after ${seconds}s`);
+            const timeoutErr = new Error(`Request to ${getHost(url)} timed out after ${seconds}s`);
+            timeoutErr.timeout = true;
+            throw timeoutErr;
+        }
+        if (error.status == null) {
+            error.network = true;
         }
         throw error;
     } finally {
@@ -47,18 +52,35 @@ async function attempt(url, options, config, timeoutMs) {
     }
 }
 
-// ponytail: retry only on 429, once. Add exponential backoff / more retries if a provider needs it.
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+const MAX_BACKOFF_MS = 8000;
+
+function shouldRetry(error, method, attemptsLeft) {
+    if (attemptsLeft <= 0) return false;
+    if (method !== 'GET' && method !== 'HEAD') return false;
+    if (error.status != null) return RETRYABLE_STATUS.has(error.status);
+    return error.timeout === true || error.network === true;
+}
+
+function backoffMs(attemptNo, retryAfterMs, baseMs) {
+    if (retryAfterMs > 0) return Math.min(retryAfterMs, MAX_BACKOFF_MS);
+    const capped = Math.min(baseMs * 2 ** attemptNo, MAX_BACKOFF_MS);
+    return Math.round(capped / 2 + Math.random() * (capped / 2));
+}
+
 async function callExternal(url, options = {}, config = {}) {
     const timeoutMs = config.timeoutMs ?? 15000;
+    const maxRetries = config.retries ?? 3;
+    const baseMs = config.retryBaseMs ?? 500;
+    const method = (options.method || 'GET').toUpperCase();
 
-    try {
-        return await attempt(url, options, config, timeoutMs);
-    } catch (error) {
-        if (error.status === 429) {
-            await wait(error.retryAfterMs > 0 ? error.retryAfterMs : 1000);
-            return attempt(url, options, config, timeoutMs);
+    for (let attemptNo = 0; ; attemptNo++) {
+        try {
+            return await attempt(url, options, config, timeoutMs);
+        } catch (error) {
+            if (!shouldRetry(error, method, maxRetries - attemptNo)) throw error;
+            await wait(backoffMs(attemptNo, error.retryAfterMs || 0, baseMs));
         }
-        throw error;
     }
 }
 
@@ -117,6 +139,11 @@ async function withSync(source, mode, run, offValue = []) {
         return data;
     } catch (error) {
         await recordSync(source, mode, false, error.message);
+        // Never let an upstream status (Shopify 401/429, Zoho 5xx) become our own
+        // response status — a leaked 401 would trip the frontend logout interceptor.
+        // Retry logic already ran inside callExternal (reads the real error.status);
+        // this runs after, so overriding here is safe. Message kept for server logs.
+        error.status = 502;
         throw error;
     }
 }
@@ -135,7 +162,25 @@ if (require.main === module) {
         await cached('e', () => Promise.reject(new Error('x'))).catch(() => {});
         await cached('e', () => Promise.resolve(++boom));
         assert.strictEqual(boom, 1);
-        console.log('apiClient cache self-check passed.');
+
+        // Retry policy: idempotent + transient only, never a POST.
+        assert.strictEqual(shouldRetry({ status: 429 }, 'GET', 3), true);
+        assert.strictEqual(shouldRetry({ status: 503 }, 'GET', 3), true);
+        assert.strictEqual(shouldRetry({ status: 404 }, 'GET', 3), false);
+        assert.strictEqual(shouldRetry({ status: 429 }, 'POST', 3), false);
+        assert.strictEqual(shouldRetry({ timeout: true }, 'GET', 3), true);
+        assert.strictEqual(shouldRetry({ network: true }, 'GET', 3), true);
+        assert.strictEqual(shouldRetry({ timeout: true }, 'GET', 0), false);
+        const b0 = backoffMs(0, 0, 500);
+        assert.ok(b0 >= 250 && b0 <= 500, `backoff ${b0} out of range`);
+        assert.strictEqual(backoffMs(5, 3000, 500), 3000);
+        assert.strictEqual(backoffMs(0, 100000, 500), 8000);
+        assert.ok(backoffMs(20, 0, 500) <= 8000);
+        const up = Object.assign(new Error('HTTP 401 from shopify'), { status: 401 });
+        const caught = await withSync('shopify', 'live', () => Promise.reject(up)).catch((e) => e);
+        assert.strictEqual(caught.status, 502);
+        assert.strictEqual(caught.message, 'HTTP 401 from shopify');
+        console.log('apiClient cache + retry self-check passed.');
     })();
 }
 

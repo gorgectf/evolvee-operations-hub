@@ -4,12 +4,14 @@ const BASE = import.meta.env.VITE_API_BASE || '';
 // localStorage keys for the saved session.
 const TOKEN_KEY = 'opshub_token';
 const USER_KEY = 'opshub_user';
+const VIEW_AS_KEY = 'opshub_view_as';
 
 export function getToken() {
     return localStorage.getItem(TOKEN_KEY);
 }
 
 export function setSession(token, user) {
+    localStorage.removeItem(VIEW_AS_KEY);
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
@@ -17,6 +19,56 @@ export function setSession(token, user) {
 export function clearSession() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem(VIEW_AS_KEY);
+}
+
+export function getViewAsRole() {
+    return localStorage.getItem(VIEW_AS_KEY);
+}
+
+export function setViewAsRole(role) {
+    if (role) localStorage.setItem(VIEW_AS_KEY, role);
+    else localStorage.removeItem(VIEW_AS_KEY);
+}
+
+export function getEffectivePermissions() {
+    const user = getUser();
+    if (!user) return [];
+
+    const real = user.permissions || [];
+    const viewAs = getViewAsRole();
+    const map = user.role_permissions;
+    if (!viewAs || !map || !map[viewAs]) return real;
+
+    return map[viewAs].filter((p) => real.includes(p));
+}
+
+export function getEffectiveRole() {
+    return getViewAsRole() || getUser()?.role || null;
+}
+
+export function viewableRoles() {
+    const user = getUser();
+    const map = user?.role_permissions;
+    if (!map) return [];
+
+    const real = user.permissions || [];
+    return Object.keys(map).filter(
+        (role) => role !== user.role && map[role].every((p) => real.includes(p))
+    );
+}
+
+export function getTokenExp() {
+    const token = getToken();
+    if (!token) return null;
+
+    try {
+        const payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const claims = JSON.parse(atob(payload));
+        return typeof claims.exp === 'number' ? claims.exp : null;
+    } catch {
+        return null;
+    }
 }
 
 export function getUser() {

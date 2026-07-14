@@ -6,6 +6,7 @@ const { validateId } = require('../middleware/validateId');
 const shopify = require('../services/integrations/shopify');
 const shopifyReviews = require('../services/integrations/shopifyReviews');
 const { computeProductMetrics } = require('../services/productMetrics');
+const { recordAudit } = require('../services/audit');
 
 const router = express.Router();
 router.use(authenticate, requirePermission('manufacturers'));
@@ -148,6 +149,11 @@ router.post('/', asyncRoute(async (req, res) => {
         await query(thresholdSql, [product.id, thresholdValue]);
     }
 
+    await recordAudit(req, {
+        action: 'create', entity: 'product', entityId: product.id,
+        details: { sku: product.sku, manufacturer_id: manufacturerIdValue, threshold: thresholdValue },
+    });
+
     res.status(201).json({ product: product });
 }));
 
@@ -164,6 +170,12 @@ router.patch('/:id/manufacturer', asyncRoute(async (req, res) => {
     if (!result.rows[0]) {
         return res.status(404).json({ error: 'Product not found.' });
     }
+
+    await recordAudit(req, {
+        action: 'manufacturer.assign', entity: 'product', entityId: id,
+        details: { manufacturer_id: manufacturerIdValue },
+    });
+
     res.json({ product: result.rows[0] });
 }));
 
@@ -185,6 +197,12 @@ router.put('/:id/threshold', asyncRoute(async (req, res) => {
         'RETURNING *';
 
     const result = await query(sql, [productId, threshold]);
+
+    await recordAudit(req, {
+        action: 'threshold.set', entity: 'product', entityId: productId,
+        details: { threshold },
+    });
+
     res.json({ threshold: result.rows[0] });
 }));
 
@@ -205,6 +223,12 @@ router.put('/:id/cost', asyncRoute(async (req, res) => {
     if (!result.rows[0]) {
         return res.status(404).json({ error: 'Product not found.' });
     }
+
+    await recordAudit(req, {
+        action: 'cost.set', entity: 'product', entityId: id,
+        details: { unit_cost: unitCost },
+    });
+
     res.json({ product: result.rows[0] });
 }));
 

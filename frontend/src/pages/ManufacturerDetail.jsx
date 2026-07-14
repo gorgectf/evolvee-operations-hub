@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { statusPillClass, formatStatus } from '../status.js';
 import { onEnter } from '../ui.jsx';
@@ -8,6 +8,8 @@ const CHANNELS = ['email', 'phone', 'meeting', 'other'];
 
 export default function ManufacturerDetail() {
     const { id } = useParams();
+    const [params] = useSearchParams();
+    const prefilled = useRef(false);
     const [data, setData] = useState(null);
     const [error, setError] = useState('');
     const [comm, setComm] = useState({ channel: 'email', summary: '' });
@@ -38,6 +40,25 @@ export default function ManufacturerDetail() {
             });
         }
     }, [data]);
+
+    useEffect(function () {
+        if (prefilled.current || !data) return;
+
+        const pid = params.get('reorder_product');
+        if (!pid || !data.products.some((p) => String(p.id) === pid)) return;
+
+        prefilled.current = true;
+        const lastOrder = data.reorder_history.find((r) => String(r.product_id) === pid);
+        const qty = lastOrder
+            ? String(lastOrder.quantity_ordered)
+            : data.manufacturer.min_order_quantity
+                ? String(data.manufacturer.min_order_quantity)
+                : '';
+
+        setReorder({ product_id: pid, quantity_ordered: qty, notes: '' });
+        document.querySelector('[data-reorder-form]')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, [data, params]);
 
     // POST a sub-resource, then clear its form and reload.
     async function post(path, body, reset) {
@@ -296,7 +317,7 @@ export default function ManufacturerDetail() {
                                             <span className="pill info">{c.channel}</span>
                                             <br />
                                             <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                                                {new Date(c.logged_at).toLocaleDateString('en-GB')}
+                                                {new Date(c.logged_at).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' })}
                                             </span>
                                         </td>
                                         <td>
@@ -325,11 +346,11 @@ export default function ManufacturerDetail() {
                                 return <option key={c}>{c}</option>;
                             })}
                         </select>
-                        <input
+                        <textarea
+                            rows={2}
                             placeholder="What was discussed or agreed"
                             value={comm.summary}
                             onChange={(e) => updateComm('summary', e.target.value)}
-                            onKeyDown={onEnter(submitComm)}
                         />
                     </div>
 
@@ -372,7 +393,7 @@ export default function ManufacturerDetail() {
                     )}
                 </section>
 
-                <section className="tile">
+                <section className="tile" data-reorder-form>
                     <h2>Reorder history</h2>
 
                     {data.reorder_history.length === 0 && (

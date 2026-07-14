@@ -16,7 +16,19 @@ async function alertIfLowStock(productId, currentStock, threshold) {
     return result.rows.length > 0;
 }
 
+let lastRun = null;
+const getLastStockCheck = () => lastRun;
+
 async function runStockCheck() {
+    try {
+        return await runStockCheckInner();
+    } catch (err) {
+        lastRun = { ran_at: new Date().toISOString(), ok: false, error: err.message };
+        throw err;
+    }
+}
+
+async function runStockCheckInner() {
     const stockLevels = await shopify.getStockLevels();
 
     // Index stock by item id and SKU so either can match a threshold row.
@@ -66,6 +78,7 @@ async function runStockCheck() {
     };
 
     console.log(`[stock-check] checked ${summary.checked} SKUs, created ${alertsCreated} new alert(s)`);
+    lastRun = { ...summary, ok: true };
     return summary;
 }
 
@@ -79,4 +92,4 @@ function scheduleStockCheck() {
     console.log(`Stock check scheduled with cron pattern "${env.stockCheckCron}"`);
 }
 
-module.exports = { runStockCheck, scheduleStockCheck };
+module.exports = { runStockCheck, scheduleStockCheck, getLastStockCheck };

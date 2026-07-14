@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useTableView, SortHeader, SearchBox, useFlash } from '../ui.jsx';
 
@@ -156,6 +157,14 @@ export default function Alerts() {
                                         </span>
                                     </td>
                                     <td>
+                                        {alert.manufacturer_id && (
+                                            <Link
+                                                className="link"
+                                                to={`/manufacturers/${alert.manufacturer_id}?reorder_product=${alert.product_id}`}
+                                            >
+                                                Reorder
+                                            </Link>
+                                        )}
                                         {alert.status === 'open' && (
                                             <button
                                                 className="link"

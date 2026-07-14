@@ -14,6 +14,9 @@ export default function Products() {
     const [costEdits, setCostEdits] = useState({});
     const [form, setForm] = useState(EMPTY_FORM);
     const [syncMsg, setSyncMsg] = useState('');
+    const [selected, setSelected] = useState(() => new Set());
+    const [bulkMfr, setBulkMfr] = useState('');
+    const [bulkThreshold, setBulkThreshold] = useState('');
     const { query, setQuery, view, sort, toggleSort } = useTableView(products, ['sku', 'name', 'manufacturer_name']);
 
     function load() {
@@ -69,6 +72,53 @@ export default function Products() {
         } catch (e) {
             setError(e.message);
         }
+    }
+
+    function toggleRow(id) {
+        setSelected((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    }
+
+    const allVisibleSelected = view.length > 0 && view.every((p) => selected.has(p.id));
+
+    function toggleAllVisible() {
+        setSelected((prev) => {
+            const next = new Set(prev);
+            if (allVisibleSelected) view.forEach((p) => next.delete(p.id));
+            else view.forEach((p) => next.add(p.id));
+            return next;
+        });
+    }
+
+    async function runBulk(apply) {
+        setError('');
+        try {
+            await Promise.all([...selected].map(apply));
+            setSelected(new Set());
+            load();
+        } catch (e) {
+            setError(e.message);
+            load();
+        }
+    }
+
+    function bulkAssign() {
+        const body = JSON.stringify({ manufacturer_id: bulkMfr ? Number(bulkMfr) : null });
+        runBulk((id) => api(`/products/${id}/manufacturer`, { method: 'PATCH', body }))
+            .then(() => setBulkMfr(''));
+    }
+
+    function bulkSetThreshold() {
+        const n = Number(bulkThreshold);
+        if (bulkThreshold === '' || !Number.isFinite(n) || n < 0) {
+            return setError('Threshold must be a number of 0 or more.');
+        }
+        const body = JSON.stringify({ threshold: n });
+        runBulk((id) => api(`/products/${id}/threshold`, { method: 'PUT', body }))
+            .then(() => setBulkThreshold(''));
     }
 
     async function assignManufacturer(product, manufacturerId) {
@@ -127,6 +177,14 @@ export default function Products() {
     function renderRow(product) {
         return (
             <tr key={product.id}>
+                <td>
+                    <input
+                        type="checkbox"
+                        checked={selected.has(product.id)}
+                        onChange={() => toggleRow(product.id)}
+                        aria-label={`Select ${product.sku}`}
+                    />
+                </td>
                 <td>{product.sku}</td>
                 <td><Link to={`/products/${product.id}`}>{product.name}</Link></td>
                 <td>
@@ -235,9 +293,42 @@ export default function Products() {
                         <button className="link" onClick={syncShopify}>Sync from Shopify</button>
                         {syncMsg && <span style={{ color: 'var(--muted)', fontSize: 13 }}>{syncMsg}</span>}
                     </div>
+
+                    {selected.size > 0 && (
+                        <div className="toolbar bulk-bar">
+                            <strong>{selected.size} selected</strong>
+                            <select value={bulkMfr} onChange={(e) => setBulkMfr(e.target.value)} style={{ maxWidth: 200 }}>
+                                <option value="">— unassigned —</option>
+                                {renderManufacturerOptions()}
+                            </select>
+                            <button className="link" onClick={bulkAssign}>Assign manufacturer</button>
+                            <span className="bulk-sep" aria-hidden="true">·</span>
+                            <input
+                                type="number"
+                                min="0"
+                                placeholder="Threshold"
+                                value={bulkThreshold}
+                                onChange={(e) => setBulkThreshold(e.target.value)}
+                                onKeyDown={onEnter(bulkSetThreshold)}
+                                style={{ maxWidth: 110 }}
+                            />
+                            <button className="link" onClick={bulkSetThreshold}>Set threshold</button>
+                            <span className="bulk-sep" aria-hidden="true">·</span>
+                            <button className="link" onClick={() => setSelected(new Set())}>Clear</button>
+                        </div>
+                    )}
+
                     <table>
                         <thead>
                             <tr>
+                                <th style={{ width: 28 }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={allVisibleSelected}
+                                        onChange={toggleAllVisible}
+                                        aria-label="Select all visible"
+                                    />
+                                </th>
                                 <SortHeader label="SKU / Item ID" sortKey="sku" sort={sort} toggleSort={toggleSort} />
                                 <SortHeader label="Product" sortKey="name" sort={sort} toggleSort={toggleSort} />
                                 <SortHeader label="Manufacturer" sortKey="manufacturer_name" sort={sort} toggleSort={toggleSort} />
@@ -248,7 +339,7 @@ export default function Products() {
                         </thead>
                         <tbody>
                             {view.length === 0 ? (
-                                <tr><td colSpan={6} className="empty">No products match “{query}”.</td></tr>
+                                <tr><td colSpan={7} className="empty">No products match “{query}”.</td></tr>
                             ) : view.map(renderRow)}
                         </tbody>
                     </table>

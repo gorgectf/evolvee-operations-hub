@@ -8,6 +8,10 @@ const { asyncRoute } = require('../middleware/errorHandler');
 
 const router = express.Router();
 
+function permissionMapFor(role) {
+    return role === 'admin' || role === 'developer' ? ROLE_PERMISSIONS : undefined;
+}
+
 const DUMMY_HASH = bcrypt.hashSync('unused-timing-equaliser', 10);
 
 const loginAttempts = new Map();
@@ -88,7 +92,8 @@ router.post('/login', rateLimit, asyncRoute(async (req, res) => {
             email: user.email,
             name: user.full_name,
             role: user.role,
-            permissions: permissions
+            permissions: permissions,
+            role_permissions: permissionMapFor(user.role)
         }
     });
 }));
@@ -101,7 +106,8 @@ router.get('/me', authenticate, (req, res) => {
         email: req.user.email,
         name: req.user.name,
         role: req.user.role,
-        permissions: permissions
+        permissions: permissions,
+        role_permissions: permissionMapFor(req.user.role)
     };
 
     res.json({ user: user });

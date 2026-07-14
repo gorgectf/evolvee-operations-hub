@@ -20,7 +20,7 @@ router.get('/', asyncRoute(async (req, res) => {
     }
 
     const sql =
-        'SELECT ra.*, p.sku, p.name AS product_name, m.name AS manufacturer ' +
+        'SELECT ra.*, p.sku, p.name AS product_name, p.manufacturer_id, m.name AS manufacturer ' +
         'FROM reorder_alerts ra ' +
         'JOIN products p ON p.id = ra.product_id ' +
         'LEFT JOIN manufacturers m ON m.id = p.manufacturer_id ' +
