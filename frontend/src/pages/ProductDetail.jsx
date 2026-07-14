@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { statusPillClass, formatStatus } from '../status.js';
 
-const money = (n) => (n == null ? '—' : `£${Number(n).toFixed(2)}`);
+const money = (n) => (n == null ? '—' : `$${Number(n).toFixed(2)}`);
 const stars = (r) => (r ? '★'.repeat(r) + '☆'.repeat(5 - r) : '—');
 
 function Sparkline({ points, width = 260, height = 60 }) {
