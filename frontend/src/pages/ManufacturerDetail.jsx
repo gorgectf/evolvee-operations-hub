@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { statusPillClass, formatStatus } from '../status.js';
 import { onEnter } from '../ui.jsx';
@@ -8,12 +8,15 @@ const CHANNELS = ['email', 'phone', 'meeting', 'other'];
 
 export default function ManufacturerDetail() {
     const { id } = useParams();
+    const [params] = useSearchParams();
+    const prefilled = useRef(false);
     const [data, setData] = useState(null);
     const [error, setError] = useState('');
     const [comm, setComm] = useState({ channel: 'email', summary: '' });
     const [contact, setContact] = useState({ name: '', role: '', email: '', phone: '' });
     const [reorder, setReorder] = useState({ product_id: '', quantity_ordered: '', notes: '' });
     const [metrics, setMetrics] = useState({ lead_time_days: '', min_order_quantity: '', payment_terms: '', quality_rating: '' });
+    const [busy, setBusy] = useState(false);
 
     const load = useCallback(function loadManufacturer() {
         api(`/manufacturers/${id}`)
@@ -27,6 +30,7 @@ export default function ManufacturerDetail() {
         load();
     }, [load]);
 
+    // Seed the metrics form whenever fresh manufacturer data arrives.
     useEffect(function () {
         if (data && data.manufacturer) {
             const m = data.manufacturer;
@@ -39,15 +43,40 @@ export default function ManufacturerDetail() {
         }
     }, [data]);
 
+    // Prefill the reorder form when arriving via a "Reorder" link with a product in the query string.
+    // Only runs once per page load (guarded by the prefilled ref).
+    useEffect(function () {
+        if (prefilled.current || !data) return;
+
+        const pid = params.get('reorder_product');
+        if (!pid || !data.products.some((p) => String(p.id) === pid)) return;
+
+        prefilled.current = true;
+        const lastOrder = data.reorder_history.find((r) => String(r.product_id) === pid);
+        const qty = lastOrder
+            ? String(lastOrder.quantity_ordered)
+            : data.manufacturer.min_order_quantity
+                ? String(data.manufacturer.min_order_quantity)
+                : '';
+
+        setReorder({ product_id: pid, quantity_ordered: qty, notes: '' });
+        document.querySelector('[data-reorder-form]')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, [data, params]);
+
     // POST a sub-resource, then clear its form and reload.
     async function post(path, body, reset) {
+        if (busy) return;
         setError('');
+        setBusy(true);
         try {
             await api(path, { method: 'POST', body: JSON.stringify(body) });
             reset();
             load();
         } catch (e) {
             setError(e.message);
+        } finally {
+            setBusy(false);
         }
     }
 
@@ -76,12 +105,16 @@ export default function ManufacturerDetail() {
     }
 
     async function saveMetrics() {
+        if (busy) return;
         setError('');
+        setBusy(true);
         try {
             await api(`/manufacturers/${id}`, { method: 'PATCH', body: JSON.stringify(metrics) });
             load();
         } catch (e) {
             setError(e.message);
+        } finally {
+            setBusy(false);
         }
     }
 
@@ -207,7 +240,7 @@ export default function ManufacturerDetail() {
                     </p>
 
                     <p>
-                        <button className="primary" onClick={saveMetrics}>Save metrics</button>
+                        <button className="primary" onClick={saveMetrics} disabled={busy}>Save metrics</button>
                     </p>
                 </section>
 
@@ -274,7 +307,7 @@ export default function ManufacturerDetail() {
                     </div>
 
                     <p>
-                        <button className="primary" onClick={submitContact}>
+                        <button className="primary" onClick={submitContact} disabled={busy}>
                             Add contact
                         </button>
                     </p>
@@ -296,7 +329,7 @@ export default function ManufacturerDetail() {
                                             <span className="pill info">{c.channel}</span>
                                             <br />
                                             <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>
-                                                {new Date(c.logged_at).toLocaleDateString('en-GB')}
+                                                {new Date(c.logged_at).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' })}
                                             </span>
                                         </td>
                                         <td>
@@ -325,16 +358,16 @@ export default function ManufacturerDetail() {
                                 return <option key={c}>{c}</option>;
                             })}
                         </select>
-                        <input
+                        <textarea
+                            rows={2}
                             placeholder="What was discussed or agreed"
                             value={comm.summary}
                             onChange={(e) => updateComm('summary', e.target.value)}
-                            onKeyDown={onEnter(submitComm)}
                         />
                     </div>
 
                     <p>
-                        <button className="primary" onClick={submitComm}>
+                        <button className="primary" onClick={submitComm} disabled={busy}>
                             Save log entry
                         </button>
                     </p>
@@ -372,7 +405,7 @@ export default function ManufacturerDetail() {
                     )}
                 </section>
 
-                <section className="tile">
+                <section className="tile" data-reorder-form>
                     <h2>Reorder history</h2>
 
                     {data.reorder_history.length === 0 && (
@@ -421,7 +454,7 @@ export default function ManufacturerDetail() {
                     </div>
 
                     <p>
-                        <button className="primary" onClick={submitReorder}>
+                        <button className="primary" onClick={submitReorder} disabled={busy}>
                             Log reorder
                         </button>
                     </p>

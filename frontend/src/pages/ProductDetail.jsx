@@ -6,14 +6,17 @@ import { statusPillClass, formatStatus } from '../status.js';
 const money = (n) => (n == null ? '—' : `$${Number(n).toFixed(2)}`);
 const stars = (r) => (r ? '★'.repeat(r) + '☆'.repeat(5 - r) : '—');
 
+// Tiny inline SVG line chart, no charting library needed for a single sparkline.
 function Sparkline({ points, width = 260, height = 60 }) {
     if (!points || points.length < 2) {
         return <p className="empty">Not enough sales data for a trend.</p>;
     }
+
     const vals = points.map((p) => p.units);
     const max = Math.max(...vals, 1);
     const stepX = width / (points.length - 1);
     const coords = vals.map((v, i) => `${(i * stepX).toFixed(1)},${(height - (v / max) * height).toFixed(1)}`);
+
     return (
         <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} style={{ maxWidth: '100%' }}>
             <polyline
@@ -32,9 +35,15 @@ export default function ProductDetail() {
     const [error, setError] = useState('');
 
     useEffect(() => {
+        // Avoid setting state after navigating to a different product mid-fetch.
+        let active = true;
+
+        setData(null);
+        setError('');
         api(`/products/${id}`)
-            .then(setData)
-            .catch((e) => setError(e.message));
+            .then((d) => { if (active) setData(d); })
+            .catch((e) => { if (active) setError(e.message); });
+        return () => { active = false; };
     }, [id]);
 
     if (error) {

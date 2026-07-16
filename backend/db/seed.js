@@ -10,9 +10,25 @@ function hashPassword(password) {
     return bcrypt.hashSync(password, 10);
 }
 
-async function seed() {
-    const existing = await query('SELECT COUNT(*)::int AS n FROM users');
+function targetIsLocal() {
+    try {
+        const host = new URL(process.env.DATABASE_URL || '').hostname;
+        return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+    } catch {
+        return false;
+    }
+}
 
+async function seed() {
+    // Demo accounts share a known password, so refuse anything but local dev.
+    if (process.env.NODE_ENV === 'production' || !targetIsLocal()) {
+        throw new Error(
+            'Refusing to seed demo accounts (shared password) against a remote/production database. ' +
+            'Use "npm run db:seed:admin" (AUTO_SEED=admin) instead — it creates a single admin with a random password.'
+        );
+    }
+
+    const existing = await query('SELECT COUNT(*)::int AS n FROM users');
     if (existing.rows[0].n > 0) {
         console.log('Database already has users - skipping seed. (Delete and recreate the database to re-seed.)');
         return;

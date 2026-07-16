@@ -3,11 +3,24 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useTableView, SortHeader, SearchBox, onEnter } from '../ui.jsx';
 
+function lastContactCell(iso) {
+    if (!iso) return <span className="pill warn">Never</span>;
+
+    const days = Math.round((Date.now() - new Date(iso)) / 86400000);
+    const label = new Date(iso).toLocaleDateString('en-GB');
+
+    // Flag stale relationships (no contact in over a month).
+    return days > 30
+        ? <span className="pill warn" title={`${days} days ago`}>{label}</span>
+        : label;
+}
+
 export default function Manufacturers() {
     const [list, setList] = useState(null);
     const [error, setError] = useState('');
     const [form, setForm] = useState({ name: '', country: '', notes: '', lead_time_days: '', min_order_quantity: '', payment_terms: '', quality_rating: '' });
     const [adding, setAdding] = useState(false);
+    const [saving, setSaving] = useState(false);
     const { query, setQuery, view, sort, toggleSort } = useTableView(list, ['name', 'country', 'notes']);
 
     function load() {
@@ -31,6 +44,7 @@ export default function Manufacturers() {
     }
 
     async function create() {
+        if (saving) return;
         // Name is the only required field.
         if (!form.name.trim()) {
             setError('Manufacturer name is required.');
@@ -38,6 +52,7 @@ export default function Manufacturers() {
         }
 
         setError('');
+        setSaving(true);
 
         try {
             await api('/manufacturers', { method: 'POST', body: JSON.stringify(form) });
@@ -46,6 +61,8 @@ export default function Manufacturers() {
             load();
         } catch (e) {
             setError(e.message);
+        } finally {
+            setSaving(false);
         }
     }
 
@@ -138,8 +155,10 @@ export default function Manufacturers() {
                     </div>
 
                     <div className="row" style={{ maxWidth: 280 }}>
-                        <button className="primary" onClick={create}>Save manufacturer</button>
-                        <button onClick={() => setAdding(false)}>Cancel</button>
+                        <button className="primary" onClick={create} disabled={saving}>
+                            {saving ? 'Saving…' : 'Save manufacturer'}
+                        </button>
+                        <button onClick={() => setAdding(false)} disabled={saving}>Cancel</button>
                     </div>
                 </div>
             ) : (
@@ -170,12 +189,13 @@ export default function Manufacturers() {
                                 <SortHeader label="Active runs" sortKey="active_runs" sort={sort} toggleSort={toggleSort} className="num" />
                                 <SortHeader label="Lead time (d)" sortKey="lead_time_days" sort={sort} toggleSort={toggleSort} className="num" />
                                 <SortHeader label="Quality" sortKey="quality_rating" sort={sort} toggleSort={toggleSort} className="num" />
+                                <SortHeader label="Last contacted" sortKey="last_contacted" sort={sort} toggleSort={toggleSort} />
                                 <th>Notes</th>
                             </tr>
                         </thead>
                         <tbody>
                             {view.length === 0 && (
-                                <tr><td colSpan={7} className="empty">No manufacturers match “{query}”.</td></tr>
+                                <tr><td colSpan={8} className="empty">No manufacturers match “{query}”.</td></tr>
                             )}
                             {view.map(function (m) {
                                 return (
@@ -190,6 +210,7 @@ export default function Manufacturers() {
                                         <td className="num">{m.active_runs}</td>
                                         <td className="num">{m.lead_time_days ?? '—'}</td>
                                         <td className="num">{m.quality_rating ? `${m.quality_rating}/5` : '—'}</td>
+                                        <td>{lastContactCell(m.last_contacted)}</td>
                                         <td style={{ color: 'var(--muted)' }}>{m.notes || ''}</td>
                                     </tr>
                                 );

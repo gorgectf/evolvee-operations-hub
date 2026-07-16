@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { api } from '../api.js';
+import { api, setToken } from '../api.js';
 import { onEnter, useFlash } from '../ui.jsx';
 
 export default function Account() {
@@ -8,26 +8,37 @@ export default function Account() {
     const [confirm, setConfirm] = useState('');
     const [error, setError] = useState('');
     const [done, setDone] = useFlash();
+    const [busy, setBusy] = useState(false);
 
     async function submit() {
+        if (busy) return;
         setError('');
         setDone('');
+
         // Confirm the new password was typed the same twice.
         if (next !== confirm) {
             setError('New passwords do not match.');
             return;
         }
+
+        setBusy(true);
         try {
-            await api('/auth/password', {
+            const res = await api('/auth/password', {
                 method: 'POST',
                 body: JSON.stringify({ current_password: current, new_password: next }),
             });
+
+            // A password change rotates the auth token; store the new one.
+            if (res && res.token) setToken(res.token);
+
             setCurrent('');
             setNext('');
             setConfirm('');
             setDone('Password updated.');
         } catch (e) {
             setError(e.message);
+        } finally {
+            setBusy(false);
         }
     }
 
@@ -67,7 +78,7 @@ export default function Account() {
                 </div>
                 <div className="field">
                     <label htmlFor="confirm">Confirm new password</label>
-                    
+
                     <input
                         id="confirm"
                         type="password"
@@ -77,7 +88,9 @@ export default function Account() {
                         autoComplete="new-password"
                     />
                 </div>
-                <button className="primary" onClick={submit}>Update password</button>
+                <button className="primary" onClick={submit} disabled={busy}>
+                    {busy ? 'Updating…' : 'Update password'}
+                </button>
             </div>
         </>
     );

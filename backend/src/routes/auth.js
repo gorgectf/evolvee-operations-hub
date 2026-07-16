@@ -8,15 +8,25 @@ const { asyncRoute } = require('../middleware/errorHandler');
 
 const router = express.Router();
 
+// Only admin/developer get the full permission map exposed to the client.
+function permissionMapFor(role) {
+    return role === 'admin' || role === 'developer' ? ROLE_PERMISSIONS : undefined;
+}
+
+// Used to keep compare timing consistent when the user isn't found, to avoid leaking existence via timing.
 const DUMMY_HASH = bcrypt.hashSync('unused-timing-equaliser', 10);
 
+// In-memory login attempt tracker, keyed by ip/email combos.
 const loginAttempts = new Map();
+
 function overLimit(key, now, windowMs, max) {
     const rec = loginAttempts.get(key);
+
     if (!rec || now - rec.start > windowMs) {
         loginAttempts.set(key, { start: now, count: 1 });
         return false;
     }
+
     rec.count += 1;
     return rec.count > max;
 }
@@ -25,6 +35,7 @@ function rateLimit(req, res, next) {
     const windowMs = 15 * 60 * 1000;
     const now = Date.now();
 
+    // Prevent unbounded growth of the map by sweeping stale entries.
     if (loginAttempts.size > 5000) {
         for (const [k, v] of loginAttempts) {
             if (now - v.start > windowMs) {
@@ -40,6 +51,7 @@ function rateLimit(req, res, next) {
     if (perEmail || perIp) {
         return res.status(429).json({ error: 'Too many attempts. Please wait and try again.' });
     }
+
     next();
 }
 
@@ -60,12 +72,14 @@ router.post('/login', rateLimit, asyncRoute(async (req, res) => {
 
     // Same message for unknown email and wrong password.
     const user = result.rows[0];
+
     if (!user) {
         bcrypt.compareSync(password, DUMMY_HASH);
         return res.status(401).json({ error: 'Incorrect email or password.' });
     }
 
     const passwordMatches = bcrypt.compareSync(password, user.password_hash);
+
     if (!passwordMatches) {
         return res.status(401).json({ error: 'Incorrect email or password.' });
     }
@@ -74,11 +88,11 @@ router.post('/login', rateLimit, asyncRoute(async (req, res) => {
         id: user.id,
         email: user.email,
         role: user.role,
-        name: user.full_name
+        name: user.full_name,
+        token_version: user.token_version
     };
     const tokenOptions = { expiresIn: env.jwtExpiresIn };
     const token = jwt.sign(tokenPayload, env.jwtSecret, tokenOptions);
-
     const permissions = ROLE_PERMISSIONS[user.role] || [];
 
     res.json({
@@ -88,7 +102,8 @@ router.post('/login', rateLimit, asyncRoute(async (req, res) => {
             email: user.email,
             name: user.full_name,
             role: user.role,
-            permissions: permissions
+            permissions: permissions,
+            role_permissions: permissionMapFor(user.role)
         }
     });
 }));
@@ -101,7 +116,8 @@ router.get('/me', authenticate, (req, res) => {
         email: req.user.email,
         name: req.user.name,
         role: req.user.role,
-        permissions: permissions
+        permissions: permissions,
+        role_permissions: permissionMapFor(req.user.role)
     };
 
     res.json({ user: user });
@@ -121,19 +137,34 @@ router.post('/password', rateLimit, authenticate, asyncRoute(async (req, res) =>
 
     const result = await query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
     const user = result.rows[0];
+
     if (!user) {
         return res.status(404).json({ error: 'User not found.' });
     }
-    
+
     if (!bcrypt.compareSync(currentPassword, user.password_hash)) {
         return res.status(400).json({ error: 'Current password is incorrect.' });
     }
 
+    // Bumping token_version invalidates any previously issued tokens.
     const newHash = bcrypt.hashSync(newPassword, 10);
-    await query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, req.user.id]);
-    res.json({ ok: true });
+    const updated = await query(
+        'UPDATE users SET password_hash = $1, token_version = token_version + 1 WHERE id = $2 ' +
+        'RETURNING id, email, role, full_name, token_version',
+        [newHash, req.user.id]
+    );
+    const u = updated.rows[0];
+
+    const token = jwt.sign(
+        { id: u.id, email: u.email, role: u.role, name: u.full_name, token_version: u.token_version },
+        env.jwtSecret,
+        { expiresIn: env.jwtExpiresIn }
+    );
+
+    res.json({ ok: true, token: token });
 }));
 
+// Quick self-check for the rate limiter logic, run only when this file is executed directly.
 if (require.main === module) {
     const assert = require('assert');
     const now = Date.now();

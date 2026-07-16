@@ -3,6 +3,7 @@ require('dotenv').config();
 const nodeEnv = process.env.NODE_ENV || 'development';
 const isProduction = nodeEnv === 'production';
 
+// Reads an env var, or throws if it's missing and there's no fallback.
 function required(name, fallback) {
     const value = process.env[name] ?? fallback;
 
@@ -12,7 +13,20 @@ function required(name, fallback) {
     return value;
 }
 
-// Reject short or placeholder secrets, but only in production.
+function hostIsLocal(connectionString) {
+    try {
+        const host = new URL(connectionString).hostname;
+        return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+    } catch {
+        return false;
+    }
+}
+
+// Require a strong JWT secret whenever this isn't a purely local/dev setup.
+const anyLiveMode = ['SHOPIFY_MODE', 'ZOHO_CRM_MODE'].some((key) => (process.env[key] || '').toLowerCase() === 'live');
+const remoteDatabase = !hostIsLocal(process.env.DATABASE_URL || '');
+const enforceStrongSecret = isProduction || anyLiveMode || remoteDatabase;
+
 function requiredJwtSecret() {
     const value = required('JWT_SECRET');
     const placeholders = [
@@ -23,11 +37,14 @@ function requiredJwtSecret() {
         'change-me-to-a-long-random-string'
     ];
 
-    if (isProduction) {
+    if (enforceStrongSecret) {
         const tooShort = value.length < 32;
         const isPlaceholder = placeholders.includes(value.toLowerCase());
         if (tooShort || isPlaceholder) {
-            throw new Error('JWT_SECRET is too weak for production. Use a long random string of 32+ characters.');
+            throw new Error(
+                'JWT_SECRET is too weak for a live/remote deployment. Use a long random string of 32+ characters. ' +
+                'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'hex\'))"'
+            );
         }
     }
     return value;
@@ -58,7 +75,6 @@ const autoSeed = seedMode === 'demo' || seedMode === 'admin';
 
 const env = {
     port: port,
-    nodeEnv: nodeEnv,
     isProduction: isProduction,
     databaseUrl: required('DATABASE_URL'),
     databaseSsl: envOr('DATABASE_SSL', ''),
@@ -72,8 +88,7 @@ const env = {
 
     modes: {
         shopify: envOr('SHOPIFY_MODE', 'off'),
-        zohoCrm: envOr('ZOHO_CRM_MODE', 'off'),
-        aftership: envOr('AFTERSHIP_MODE', 'off')
+        zohoCrm: envOr('ZOHO_CRM_MODE', 'off')
     },
 
     shopify: {
@@ -87,13 +102,7 @@ const env = {
         clientSecret: envOr('ZOHO_CLIENT_SECRET', ''),
         refreshToken: envOr('ZOHO_REFRESH_TOKEN', ''),
         accountsBase: envOr('ZOHO_ACCOUNTS_BASE', 'https://accounts.zoho.com'),
-        apiBase: envOr('ZOHO_API_BASE', 'https://www.zohoapis.com'),
-        organizationId: envOr('ZOHO_ORGANIZATION_ID', '')
-    },
-
-    aftership: {
-        apiKey: envOr('AFTERSHIP_API_KEY', ''),
-        webhookSecret: envOr('AFTERSHIP_WEBHOOK_SECRET', '')
+        apiBase: envOr('ZOHO_API_BASE', 'https://www.zohoapis.com')
     }
 };
 

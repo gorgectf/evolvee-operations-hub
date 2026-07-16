@@ -2,7 +2,7 @@ import assert from 'node:assert';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { computeProductMetrics } = require('./productMetrics.js');
+const { computeProductMetrics } = require('../../backend/src/services/productMetrics.js');
 
 const normal = computeProductMetrics(
     { sku: 'X', title: 'Serum', units_sold_30d: 412, revenue_30d: 14008 },

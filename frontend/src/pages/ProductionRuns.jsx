@@ -10,6 +10,7 @@ export default function ProductionRuns() {
     const [manufacturers, setManufacturers] = useState([]);
     const [products, setProducts] = useState([]);
     const [error, setError] = useState('');
+    const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({
         manufacturer_id: '',
         product_id: '',
@@ -41,12 +42,15 @@ export default function ProductionRuns() {
     }
 
     async function create() {
+        if (saving) return;
+
         if (!form.manufacturer_id) {
             setError('Choose a manufacturer for this run.');
             return;
         }
 
         setError('');
+        setSaving(true);
 
         const body = {
             manufacturer_id: Number(form.manufacturer_id),
@@ -62,6 +66,8 @@ export default function ProductionRuns() {
             load();
         } catch (e) {
             setError(e.message);
+        } finally {
+            setSaving(false);
         }
     }
 
@@ -74,6 +80,7 @@ export default function ProductionRuns() {
         }
     }
 
+    // The "move to..." select resets to blank after each change, so only act on a real selection.
     function handleStatusChange(id, e) {
         if (e.target.value) {
             setStatus(id, e.target.value);
@@ -137,9 +144,10 @@ export default function ProductionRuns() {
                     <button
                         className="primary"
                         onClick={create}
+                        disabled={saving}
                         style={{ flex: '0 0 auto' }}
                     >
-                        Start run
+                        {saving ? 'Starting…' : 'Start run'}
                     </button>
                 </div>
             </div>

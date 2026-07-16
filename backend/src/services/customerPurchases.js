@@ -8,9 +8,10 @@ function aggregateCustomerPurchases(orders) {
         if (!byEmail[email]) {
             byEmail[email] = { unitsBySku: {}, titleBySku: {}, history: [] };
         }
-        const entry = byEmail[email];
 
+        const entry = byEmail[email];
         const items = [];
+
         for (const li of (order.line_items || [])) {
             const key = li.sku || li.title;
             const qty = li.quantity || 0;
@@ -28,9 +29,11 @@ function aggregateCustomerPurchases(orders) {
     }
 
     const result = {};
+
     for (const email of Object.keys(byEmail)) {
         const entry = byEmail[email];
 
+        // Favorite = highest units purchased across all of this customer's SKUs.
         let favSku = null;
         let favUnits = 0;
         for (const sku of Object.keys(entry.unitsBySku)) {
@@ -40,6 +43,7 @@ function aggregateCustomerPurchases(orders) {
             }
         }
 
+        // Most recent order first.
         entry.history.sort((a, b) => (a.date < b.date ? 1 : -1));
 
         result[email] = {

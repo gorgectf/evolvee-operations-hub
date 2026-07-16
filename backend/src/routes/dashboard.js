@@ -4,10 +4,10 @@ const { authenticate, requirePermission } = require('../middleware/auth');
 const { asyncRoute } = require('../middleware/errorHandler');
 const shopify = require('../services/integrations/shopify');
 const zohoCrm = require('../services/integrations/zohoCrm');
-const aftership = require('../services/integrations/aftership');
 const { computeProductMetrics } = require('../services/productMetrics');
 
 const router = express.Router();
+
 router.use(authenticate);
 
 router.get('/inventory', requirePermission('inventory'), asyncRoute(async (req, res) => {
@@ -19,6 +19,7 @@ router.get('/inventory', requirePermission('inventory'), asyncRoute(async (req, 
         'JOIN products p ON p.id = rt.product_id'
     );
 
+    // Index thresholds by both inventory item id and SKU for flexible lookup below.
     const thresholds = {};
     for (const row of thresholdResult.rows) {
         if (row.shopify_inventory_item_id) {
@@ -62,7 +63,7 @@ router.get('/sales', requirePermission('sales'), asyncRoute(async (req, res) => 
 
     const bestSellers = sorted.slice(0, 3);
 
-    const slowMovers = sorted.slice(-3);
+    const slowMovers = sorted.slice(Math.max(bestSellers.length, sorted.length - 3));
     slowMovers.reverse();
 
     res.json({
@@ -74,13 +75,14 @@ router.get('/sales', requirePermission('sales'), asyncRoute(async (req, res) => 
     });
 }));
 
-router.get('/product-performance', requirePermission('sales'), asyncRoute(async (req, res) => {
+router.get('/product-performance', requirePermission('revenue'), asyncRoute(async (req, res) => {
     const [sales, stock, costResult] = await Promise.all([
         shopify.getSalesOverview(),
         shopify.getStockLevels(),
         query('SELECT sku, unit_cost FROM products WHERE unit_cost IS NOT NULL')
     ]);
 
+    // Build lookup maps so we can merge cost and stock data with sales per SKU.
     const costBySku = {};
     for (const row of costResult.rows) {
         costBySku[row.sku] = Number(row.unit_cost);
@@ -110,23 +112,25 @@ router.get('/customers', requirePermission('customers'), asyncRoute(async (req, 
         shopify.getCustomerPurchases()
     ]);
 
-    // Index CRM records by email to match Shopify customers.
+    // Index CRM records by lowercased email to match Shopify customers case-insensitively.
     const crmByEmail = {};
     for (const c of crm) {
-        crmByEmail[c.email] = c;
+        crmByEmail[(c.email || '').toLowerCase()] = c;
     }
 
     shop.sort(function (a, b) {
         return b.total_spent - a.total_spent;
     });
+
     const topTen = shop.slice(0, 10);
 
     const customers = [];
     for (const c of topTen) {
-        const crmEntry = crmByEmail[c.email];
+        const crmEntry = crmByEmail[(c.email || '').toLowerCase()];
 
         let segment = '—';
         let crmNotes = '';
+
         if (crmEntry) {
             if (crmEntry.segment) {
                 segment = crmEntry.segment;
@@ -188,7 +192,7 @@ router.get('/revenue', requirePermission('revenue'), asyncRoute(async (req, res)
 }));
 
 router.get('/shipping', requirePermission('shipping'), asyncRoute(async (req, res) => {
-    const trackings = await aftership.getTrackings();
+    const trackings = await shopify.getTrackings();
 
     const byStatus = {};
     for (const t of trackings) {
@@ -223,7 +227,7 @@ router.get('/alerts-summary', requirePermission('alerts'), asyncRoute(async (req
     });
 }));
 
-// QR partner dashboard is an in-house build by another team — plain placeholder until it ships.
+// QR partner dashboard placeholder message
 router.get('/partners', requirePermission('partners'), (req, res) => {
     res.json({ message: 'QR partner dashboard is in development — coming soon.' });
 });

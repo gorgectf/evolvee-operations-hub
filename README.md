@@ -58,7 +58,7 @@ Two systems in one app.
 - Top customers (Shopify + Zoho CRM)
 - Revenue by day / week / month (Shopify)
 - Reorder alerts and manufacturing triggers
-- Order and shipping status (AfterShip)
+- Order and shipping status (Shopify fulfilments)
 - QR partner dashboard (currently a placeholder)
 - User management (Admin only)
 

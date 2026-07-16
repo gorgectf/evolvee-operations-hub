@@ -14,6 +14,10 @@ export default function Products() {
     const [costEdits, setCostEdits] = useState({});
     const [form, setForm] = useState(EMPTY_FORM);
     const [syncMsg, setSyncMsg] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [selected, setSelected] = useState(() => new Set());
+    const [bulkMfr, setBulkMfr] = useState('');
+    const [bulkThreshold, setBulkThreshold] = useState('');
     const { query, setQuery, view, sort, toggleSort } = useTableView(products, ['sku', 'name', 'manufacturer_name']);
 
     function load() {
@@ -48,8 +52,10 @@ export default function Products() {
     }
 
     async function saveRow(product) {
+        if (busy) return;
         const threshold = edits[product.id];
         const cost = costEdits[product.id];
+        setBusy(true);
         try {
             if (threshold !== undefined && threshold !== '') {
                 await api(`/products/${product.id}/threshold`, {
@@ -68,7 +74,58 @@ export default function Products() {
             load();
         } catch (e) {
             setError(e.message);
+        } finally {
+            setBusy(false);
         }
+    }
+
+    function toggleRow(id) {
+        setSelected((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    }
+
+    // "All selected" only counts rows currently visible under the active search/filter.
+    const allVisibleSelected = view.length > 0 && view.every((p) => selected.has(p.id));
+
+    function toggleAllVisible() {
+        setSelected((prev) => {
+            const next = new Set(prev);
+            if (allVisibleSelected) view.forEach((p) => next.delete(p.id));
+            else view.forEach((p) => next.add(p.id));
+            return next;
+        });
+    }
+
+    // Shared runner for bulk actions: applies `apply` to every selected id, then reloads either way.
+    async function runBulk(apply) {
+        setError('');
+        try {
+            await Promise.all([...selected].map(apply));
+            setSelected(new Set());
+            load();
+        } catch (e) {
+            setError(e.message);
+            load();
+        }
+    }
+
+    function bulkAssign() {
+        const body = JSON.stringify({ manufacturer_id: bulkMfr ? Number(bulkMfr) : null });
+        runBulk((id) => api(`/products/${id}/manufacturer`, { method: 'PATCH', body }))
+            .then(() => setBulkMfr(''));
+    }
+
+    function bulkSetThreshold() {
+        const n = Number(bulkThreshold);
+        if (bulkThreshold === '' || !Number.isFinite(n) || n < 0) {
+            return setError('Threshold must be a number of 0 or more.');
+        }
+        const body = JSON.stringify({ threshold: n });
+        runBulk((id) => api(`/products/${id}/threshold`, { method: 'PUT', body }))
+            .then(() => setBulkThreshold(''));
     }
 
     async function assignManufacturer(product, manufacturerId) {
@@ -84,23 +141,30 @@ export default function Products() {
     }
 
     async function syncShopify() {
+        if (busy) return;
         setError('');
         setSyncMsg('Syncing…');
+        setBusy(true);
         try {
             const r = await api('/products/sync-shopify', { method: 'POST' });
-            setSyncMsg(`Added ${r.added} new of ${r.total} Shopify items.`);
+            const skippedNote = r.skipped ? `, ${r.skipped} skipped` : '';
+            setSyncMsg(`Synced ${r.synced} of ${r.total} Shopify items${skippedNote}.`);
             load();
         } catch (e) {
             setSyncMsg('');
             setError(e.message);
+        } finally {
+            setBusy(false);
         }
     }
 
     async function createProduct() {
+        if (busy) return;
         if (!form.sku.trim() || !form.name.trim()) {
             return setError('SKU / item ID and product name are required.');
         }
         setError('');
+        setBusy(true);
         try {
             await api('/products', {
                 method: 'POST',
@@ -115,6 +179,8 @@ export default function Products() {
             load();
         } catch (e) {
             setError(e.message);
+        } finally {
+            setBusy(false);
         }
     }
 
@@ -127,6 +193,14 @@ export default function Products() {
     function renderRow(product) {
         return (
             <tr key={product.id}>
+                <td>
+                    <input
+                        type="checkbox"
+                        checked={selected.has(product.id)}
+                        onChange={() => toggleRow(product.id)}
+                        aria-label={`Select ${product.sku}`}
+                    />
+                </td>
                 <td>{product.sku}</td>
                 <td><Link to={`/products/${product.id}`}>{product.name}</Link></td>
                 <td>
@@ -160,7 +234,7 @@ export default function Products() {
                     />
                 </td>
                 <td>
-                    <button className="link" onClick={() => saveRow(product)}>Save</button>
+                    <button className="link" onClick={() => saveRow(product)} disabled={busy}>Save</button>
                 </td>
             </tr>
         );
@@ -216,8 +290,8 @@ export default function Products() {
                         onKeyDown={onEnter(createProduct)}
                         style={{ maxWidth: 120 }}
                     />
-                    <button className="primary" onClick={createProduct} style={{ flex: '0 0 auto' }}>
-                        Add
+                    <button className="primary" onClick={createProduct} disabled={busy} style={{ flex: '0 0 auto' }}>
+                        {busy ? 'Adding…' : 'Add'}
                     </button>
                 </div>
             </div>
@@ -232,12 +306,45 @@ export default function Products() {
                             setQuery={setQuery}
                             placeholder="Search SKU, product, manufacturer…"
                         />
-                        <button className="link" onClick={syncShopify}>Sync from Shopify</button>
+                        <button className="link" onClick={syncShopify} disabled={busy}>Sync from Shopify</button>
                         {syncMsg && <span style={{ color: 'var(--muted)', fontSize: 13 }}>{syncMsg}</span>}
                     </div>
+
+                    {selected.size > 0 && (
+                        <div className="toolbar bulk-bar">
+                            <strong>{selected.size} selected</strong>
+                            <select value={bulkMfr} onChange={(e) => setBulkMfr(e.target.value)} style={{ maxWidth: 200 }}>
+                                <option value="">— unassigned —</option>
+                                {renderManufacturerOptions()}
+                            </select>
+                            <button className="link" onClick={bulkAssign}>Assign manufacturer</button>
+                            <span className="bulk-sep" aria-hidden="true">·</span>
+                            <input
+                                type="number"
+                                min="0"
+                                placeholder="Threshold"
+                                value={bulkThreshold}
+                                onChange={(e) => setBulkThreshold(e.target.value)}
+                                onKeyDown={onEnter(bulkSetThreshold)}
+                                style={{ maxWidth: 110 }}
+                            />
+                            <button className="link" onClick={bulkSetThreshold}>Set threshold</button>
+                            <span className="bulk-sep" aria-hidden="true">·</span>
+                            <button className="link" onClick={() => setSelected(new Set())}>Clear</button>
+                        </div>
+                    )}
+
                     <table>
                         <thead>
                             <tr>
+                                <th style={{ width: 28 }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={allVisibleSelected}
+                                        onChange={toggleAllVisible}
+                                        aria-label="Select all visible"
+                                    />
+                                </th>
                                 <SortHeader label="SKU / Item ID" sortKey="sku" sort={sort} toggleSort={toggleSort} />
                                 <SortHeader label="Product" sortKey="name" sort={sort} toggleSort={toggleSort} />
                                 <SortHeader label="Manufacturer" sortKey="manufacturer_name" sort={sort} toggleSort={toggleSort} />
@@ -248,7 +355,7 @@ export default function Products() {
                         </thead>
                         <tbody>
                             {view.length === 0 ? (
-                                <tr><td colSpan={6} className="empty">No products match “{query}”.</td></tr>
+                                <tr><td colSpan={7} className="empty">No products match “{query}”.</td></tr>
                             ) : view.map(renderRow)}
                         </tbody>
                     </table>

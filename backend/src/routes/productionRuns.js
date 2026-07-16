@@ -2,11 +2,22 @@ const express = require('express');
 const { query } = require('../config/db');
 const { authenticate, requirePermission } = require('../middleware/auth');
 const { asyncRoute } = require('../middleware/errorHandler');
+const { validateId } = require('../middleware/validateId');
 
 const router = express.Router();
+
 router.use(authenticate, requirePermission('manufacturers'));
+router.param('id', validateId);
 
 const STATUSES = ['ordered', 'in_production', 'shipped', 'received', 'cancelled'];
+
+// null/'' means "not set" (allowed); any provided value must be a positive number.
+function invalidQuantity(quantity) {
+    if (quantity == null || quantity === '') {
+        return false;
+    }
+    return !(Number(quantity) > 0);
+}
 
 router.get('/', asyncRoute(async (req, res) => {
     const sql =
@@ -14,9 +25,11 @@ router.get('/', asyncRoute(async (req, res) => {
         'FROM production_runs pr ' +
         'JOIN manufacturers m ON m.id = pr.manufacturer_id ' +
         'LEFT JOIN products p ON p.id = pr.product_id ' +
-        'ORDER BY pr.created_at DESC';
+        'ORDER BY pr.created_at DESC ' +
+        'LIMIT 1000';
 
     const result = await query(sql);
+
     res.json({ runs: result.rows });
 }));
 
@@ -38,6 +51,11 @@ router.post('/', asyncRoute(async (req, res) => {
         return res.status(400).json({ error: 'status must be one of: ' + allowed });
     }
 
+    if (invalidQuantity(quantity)) {
+        return res.status(400).json({ error: 'quantity must be greater than 0.' });
+    }
+
+    // Defaults to 'ordered' in SQL via COALESCE when statusValue is null.
     const productIdValue = productId || null;
     const quantityValue = quantity || null;
     const statusValue = status || null;
@@ -72,22 +90,32 @@ router.patch('/:id', asyncRoute(async (req, res) => {
         return res.status(400).json({ error: 'status must be one of: ' + allowed });
     }
 
-    const statusValue = status ?? null;
-    const expectedDateValue = expectedDate ?? null;
-    const notesValue = notes ?? null;
-    const quantityValue = quantity ?? null;
+    if (invalidQuantity(quantity)) {
+        return res.status(400).json({ error: 'quantity must be greater than 0.' });
+    }
 
+    // Only update columns whose key is present; '' clears expected_date/quantity.
     const id = Number(req.params.id);
-    const sql =
-        'UPDATE production_runs SET ' +
-        '    status = COALESCE($1, status), ' +
-        '    expected_date = COALESCE($2, expected_date), ' +
-        '    notes = COALESCE($3, notes), ' +
-        '    quantity = COALESCE($4, quantity), ' +
-        '    updated_at = NOW() ' +
-        'WHERE id = $5 RETURNING *';
+    const set = [];
+    const values = [];
+    let i = 1;
+    const put = (col, val) => { set.push(`${col} = $${i++}`); values.push(val); };
+    const orNull = (v) => (v === '' || v == null ? null : v);
 
-    const result = await query(sql, [statusValue, expectedDateValue, notesValue, quantityValue, id]);
+    if ('status' in body) put('status', status);
+    if ('expected_date' in body) put('expected_date', orNull(expectedDate));
+    if ('notes' in body) put('notes', notes || null);
+    if ('quantity' in body) put('quantity', orNull(quantity));
+
+    if (set.length === 0) {
+        return res.status(400).json({ error: 'No fields to update.' });
+    }
+
+    set.push('updated_at = NOW()');
+    values.push(id);
+    const sql = `UPDATE production_runs SET ${set.join(', ')} WHERE id = $${i} RETURNING *`;
+
+    const result = await query(sql, values);
 
     if (!result.rows[0]) {
         return res.status(404).json({ error: 'Production run not found.' });

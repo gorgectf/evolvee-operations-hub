@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { compareValues, selectRows, toCsv } from './tableView.js';
+import { compareValues, selectRows, toCsv } from '../../frontend/src/tableView.js';
 
 assert.ok(compareValues(2, 10) < 0, 'numbers compare numerically');
 assert.ok(compareValues('ER-2', 'ER-10') < 0, 'numeric strings sort naturally');
@@ -38,5 +38,10 @@ assert.equal(
     'SKU,Note\n"B,2","has ""quote""\nand newline"',
 );
 assert.equal(toCsv(csvCols, []), 'SKU,Note');
+
+assert.equal(
+    toCsv(csvCols, [{ sku: '=1+1', note: '@cmd' }]),
+    "SKU,Note\n'=1+1,'@cmd",
+);
 
 console.log('tableView self-check passed.');

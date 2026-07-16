@@ -22,6 +22,7 @@ function errorHandler(err, req, res, next) {
     const mapped = err.code ? PG_ERROR_RESPONSES[err.code] : undefined;
     const status = mapped ? mapped.status : (err.status || 500);
 
+    // Only leak the raw error message for known 4xx errors explicitly marked safe to expose.
     let responseMessage;
     if (mapped) {
         responseMessage = mapped.message;

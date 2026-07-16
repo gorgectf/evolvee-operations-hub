@@ -2,6 +2,7 @@ function computeProductMetrics(sale, stock, cost) {
     const units = sale.units_sold_30d || 0;
     const revenue = sale.revenue_30d || 0;
     const onHand = (stock && stock.stock_on_hand) || 0;
+    // Fall back to average sale price when we don't have a listed stock price.
     const price = Number(stock && stock.price) || (units > 0 ? revenue / units : 0);
 
     const hasCost = cost != null && price > 0;

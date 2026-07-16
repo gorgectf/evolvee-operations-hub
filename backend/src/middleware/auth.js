@@ -41,13 +41,16 @@ async function authenticate(req, res, next) {
 
     try {
         const result = await query(
-            'SELECT id, email, full_name, role, is_active FROM users WHERE id = $1',
+            'SELECT id, email, full_name, role, is_active, token_version FROM users WHERE id = $1',
             [payload.id]
         );
         const user = result.rows[0];
-        if (!user || !user.is_active) {
+
+        // token_version mismatch means the token was issued before a password reset/deactivation.
+        if (!user || !user.is_active || (payload.token_version || 0) !== user.token_version) {
             return res.status(401).json({ error: 'Session expired or invalid. Please sign in again.' });
         }
+
         req.user = { id: user.id, email: user.email, role: user.role, name: user.full_name };
         next();
     } catch (err) {

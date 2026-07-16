@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api, getUser } from '../api.js';
-import { useTableView, SortHeader, ExportButton, CopyText } from '../ui.jsx';
+import { api, getEffectivePermissions } from '../api.js';
+import { useTableView, SortHeader, SearchBox, ExportButton, CopyText } from '../ui.jsx';
+import { applyOrder, dropBefore, reorder } from '../dashboardOrder.js';
 import {
     ResponsiveContainer,
     LineChart,
@@ -29,13 +30,14 @@ function formatCount(value) {
     return Number(value || 0).toLocaleString('en-GB');
 }
 
+// Builds the top KPI strip from whichever modules the user has access to.
 function ExecKpiCards({ inventory, sales, revenue, shipping, alerts }) {
     const cards = [];
 
     if (revenue.data) {
         cards.push({
             key: 'revenue',
-            label: 'Revenue — this month',
+            label: 'Revenue — last 30 days',
             value: formatGBP(sumBy(revenue.data.daily, 'revenue')),
         });
     }
@@ -119,10 +121,33 @@ function ExecKpiCards({ inventory, sales, revenue, shipping, alerts }) {
     );
 }
 
-function Tile({ title, source, wide, children }) {
+function Tile({ id, title, source, wide, drag, children }) {
+    // `drag` is null when the layout is locked; the tile renders inert.
+
+    const active = Boolean(drag);
+    const cls =
+        `tile${wide ? ' wide' : ''}` +
+        (drag?.dragging ? ' dragging' : '') +
+        (drag?.over === 'before' ? ' drop-before' : '') +
+        (drag?.over === 'after' ? ' drop-after' : '');
+
     return (
-        <section className={`tile${wide ? ' wide' : ''}`}>
+        <section className={cls} data-tile-id={id}>
             <h2>
+                {active && (
+                    <button
+                        type="button"
+                        className="tile-grip"
+                        title="Drag to reorder"
+                        aria-label={`Drag to reorder ${title}`}
+                        onPointerDown={(e) => drag.onPointerDown(id, e)}
+                        onPointerMove={drag.onPointerMove}
+                        onPointerUp={drag.onPointerUp}
+                        onPointerCancel={drag.onPointerUp}
+                    >
+                        ⠿
+                    </button>
+                )}
                 {title} {source && <span className="src">{source}</span>}
             </h2>
             {children}
@@ -130,8 +155,51 @@ function Tile({ title, source, wide, children }) {
     );
 }
 
-// Loads one dashboard module's data when enabled.
-function useModule(path, enabled) {
+// Layout persistence + lock, in localStorage. Falls back to defaults if
+// storage is unavailable (private mode, quota).
+const ORDER_KEY = 'dashboard-tile-order';
+const LOCK_KEY = 'dashboard-locked';
+
+function load(key, fallback) {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw == null ? fallback : JSON.parse(raw);
+    } catch {
+        return fallback;
+    }
+}
+
+function save(key, value) {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+    } catch { /* ignore */ }
+}
+
+function useDashboardLayout() {
+    const [order, setOrderState] = useState(() => load(ORDER_KEY, []));
+    const [locked, setLockedState] = useState(() => load(LOCK_KEY, true));
+
+    const setOrder = (next) => {
+        setOrderState(next);
+        save(ORDER_KEY, next);
+    };
+    const setLocked = (next) => {
+        setLockedState(next);
+        save(LOCK_KEY, next);
+    };
+    const reset = () => {
+        setOrderState([]);
+        try {
+            localStorage.removeItem(ORDER_KEY);
+        } catch { /* ignore */ }
+    };
+
+    return { order, setOrder, locked, setLocked, reset };
+}
+
+// Loads one dashboard module's data when enabled. Pass refreshMs to re-poll
+// in the background; a failed refresh keeps the last good data.
+function useModule(path, enabled, refreshMs) {
     const [state, setState] = useState({ loading: enabled, data: null, error: null });
 
     useEffect(() => {
@@ -140,18 +208,24 @@ function useModule(path, enabled) {
         // Skip state updates if the effect was cleaned up before the fetch resolved.
         let active = true;
 
-        api(path)
-            .then((data) => {
-                if (active) setState({ loading: false, data, error: null });
-            })
-            .catch((err) => {
-                if (active) setState({ loading: false, data: null, error: err.message });
-            });
+        const load = () => {
+            api(path)
+                .then((data) => {
+                    if (active) setState({ loading: false, data, error: null });
+                })
+                .catch((err) => {
+                    if (active) setState((s) => ({ loading: false, data: s.data, error: s.data ? null : err.message }));
+                });
+        };
+
+        load();
+        const timer = refreshMs ? setInterval(load, refreshMs) : null;
 
         return () => {
             active = false;
+            if (timer) clearInterval(timer);
         };
-    }, [path, enabled]);
+    }, [path, enabled, refreshMs]);
 
     return state;
 }
@@ -170,6 +244,18 @@ function Body({ state, children }) {
     return children(state.data);
 }
 
+const ALERTS_SEEN_KEY = 'alerts-seen-count';
+
+function NewAlertsBadge({ count }) {
+    const [seen] = useState(() => load(ALERTS_SEEN_KEY, null));
+    useEffect(() => { save(ALERTS_SEEN_KEY, count); }, [count]);
+
+    const delta = seen == null ? 0 : count - seen;
+    if (delta <= 0) return null;
+
+    return <span className="pill low" style={{ marginLeft: 8 }}>▲ {delta} new</span>;
+}
+
 function stockPill(isLowStock) {
     if (isLowStock) return <span className="pill low">Low</span>;
 
@@ -183,14 +269,20 @@ function shippingStatusClass(status) {
     return 'info';
 }
 
-function DataTable({ columns, rows, filename, limit, copyKey, keyField = 'id' }) {
-    const { view, sort, toggleSort } = useTableView(rows, []);
-    const shown = limit ? view.slice(0, limit) : view;
+function DataTable({ columns, rows, filename, limit, copyKey, keyField = 'id', search }) {
+    const searchFields = search || columns.map((c) => c.key);
+    const { query, setQuery, view, sort, toggleSort } = useTableView(rows, searchFields);
+    const shown = limit && !query ? view.slice(0, limit) : view;
     const csvColumns = columns.map((c) => ({ label: c.label, get: (row) => row[c.key] }));
+    const showSearch = (rows?.length || 0) > (limit || 8);
 
     return (
         <>
-            <div className="toolbar" style={{ justifyContent: 'flex-end', marginBottom: 8 }}>
+            <div
+                className="toolbar"
+                style={{ justifyContent: showSearch ? 'space-between' : 'flex-end', marginBottom: 8 }}
+            >
+                {showSearch && <SearchBox query={query} setQuery={setQuery} />}
                 <ExportButton filename={filename} columns={csvColumns} rows={view} />
             </div>
             <div className="table-scroll">
@@ -231,49 +323,41 @@ function DataTable({ columns, rows, filename, limit, copyKey, keyField = 'id' })
 }
 
 export default function Dashboard() {
-    const user = getUser();
+    const permissions = getEffectivePermissions();
 
     function canAccess(permission) {
-        return user?.permissions?.includes(permission);
+        return permissions.includes(permission);
     }
 
     const inventory = useModule('/dashboard/inventory', canAccess('inventory'));
     const sales = useModule('/dashboard/sales', canAccess('sales'));
-    const productPerf = useModule('/dashboard/product-performance', canAccess('sales'));
+    const productPerf = useModule('/dashboard/product-performance', canAccess('revenue'));
     const customers = useModule('/dashboard/customers', canAccess('customers'));
     const revenue = useModule('/dashboard/revenue', canAccess('revenue'));
-    const shipping = useModule('/dashboard/shipping', canAccess('shipping'));
+    const shipping = useModule('/dashboard/shipping', canAccess('shipping'), 30000);
     const alerts = useModule('/dashboard/alerts-summary', canAccess('alerts'));
     const partners = useModule('/dashboard/partners', canAccess('partners'));
     const sync = useModule('/sync/status', canAccess('sync'));
 
-    // Sources that failed their most recent sync.
+    // Sources that failed their most recent sync
     const failedSources = (sync.data?.sources || []).filter((source) => source.ok === false);
 
-    return (
-        <>
-            <h1>Operations dashboard</h1>
-            <p className="sub">
-                A single view of stock, sales, customers, revenue, and deliveries.
-            </p>
+    // Tile order + lock state, persisted to localStorage
+    const layout = useDashboardLayout();
+    const { order, setOrder, locked, setLocked, reset } = layout;
 
-            {failedSources.length > 0 && (
-                <div className="banner error">
-                    Data sync issue — the following sources failed their last update and may
-                    be showing older data: {failedSources.map((source) => source.source).join(', ')}.
-                </div>
-            )}
+    // Transient drag state (not persisted). `over` = { id, before }
+    const [dragId, setDragId] = useState(null);
+    const [over, setOver] = useState(null);
+    const clearDrag = () => {
+        setDragId(null);
+        setOver(null);
+    };
 
-            <ExecKpiCards
-                inventory={inventory}
-                sales={sales}
-                revenue={revenue}
-                shipping={shipping}
-                alerts={alerts}
-            />
-
-            <div className="grid">
-                {canAccess('alerts') && (
+    // Build the visible tiles as { id, el }, then apply the saved order
+    const defs = [];
+    if (canAccess('alerts')) {
+        defs.push({ id: 'alerts', el: (
                     <Tile title="Reorder alerts" source="Manufacturer tool">
                         <Body state={alerts}>
                             {(data) => {
@@ -291,7 +375,10 @@ export default function Dashboard() {
                                                 <div className="v" style={{ color: 'var(--bad)' }}>
                                                     {data.open_count}
                                                 </div>
-                                                <div className="l">SKUs / item IDs need reordering</div>
+                                                <div className="l">
+                                                    SKUs / item IDs need reordering
+                                                    <NewAlertsBadge count={data.open_count} />
+                                                </div>
                                             </div>
                                         </div>
                                         <DataTable
@@ -315,9 +402,10 @@ export default function Dashboard() {
                             }}
                         </Body>
                     </Tile>
-                )}
-
-                {canAccess('inventory') && (
+        ) });
+    }
+    if (canAccess('inventory')) {
+        defs.push({ id: 'inventory', el: (
                     <Tile title="Stock levels" source="Shopify">
                         <Body state={inventory}>
                             {(data) => (
@@ -336,9 +424,10 @@ export default function Dashboard() {
                             )}
                         </Body>
                     </Tile>
-                )}
-
-                {canAccess('sales') && (
+        ) });
+    }
+    if (canAccess('sales')) {
+        defs.push({ id: 'product-sales', el: (
                     <Tile title="Product sales — last 30 days" source="Shopify">
                         <Body state={sales}>
                             {(data) => (
@@ -391,9 +480,10 @@ export default function Dashboard() {
                             )}
                         </Body>
                     </Tile>
-                )}
-
-                {canAccess('sales') && (
+        ) });
+    }
+    if (canAccess('revenue')) {
+        defs.push({ id: 'product-performance', el: (
                     <Tile title="Product performance — last 30 days" source="Shopify" wide>
                         <Body state={productPerf}>
                             {(data) => (
@@ -415,9 +505,10 @@ export default function Dashboard() {
                             )}
                         </Body>
                     </Tile>
-                )}
-
-                {canAccess('customers') && (
+        ) });
+    }
+    if (canAccess('customers')) {
+        defs.push({ id: 'customers', el: (
                     <Tile title="Top customers" source="Shopify + Zoho CRM">
                         <Body state={customers}>
                             {(data) => (
@@ -450,10 +541,11 @@ export default function Dashboard() {
                             )}
                         </Body>
                     </Tile>
-                )}
-
-                {canAccess('shipping') && (
-                    <Tile title="Orders in transit" source="AfterShip">
+        ) });
+    }
+    if (canAccess('shipping')) {
+        defs.push({ id: 'shipping', el: (
+                    <Tile title="Orders in transit" source="Shopify">
                         <Body state={shipping}>
                             {(data) => (
                                 <>
@@ -479,17 +571,19 @@ export default function Dashboard() {
                             )}
                         </Body>
                     </Tile>
-                )}
-
-                {canAccess('partners') && (
+        ) });
+    }
+    if (canAccess('partners')) {
+        defs.push({ id: 'partners', el: (
                     <Tile title="Partners & commissions" source="QR partner dashboard">
                         <Body state={partners}>
                             {(data) => <p className="empty">{data.message}</p>}
                         </Body>
                     </Tile>
-                )}
-
-                {canAccess('revenue') && (
+        ) });
+    }
+    if (canAccess('revenue')) {
+        defs.push({ id: 'revenue', el: (
                     <Tile title="Revenue" source="Shopify" wide>
                         <Body state={revenue}>
                             {(data) => (
@@ -546,6 +640,89 @@ export default function Dashboard() {
                             )}
                         </Body>
                     </Tile>
+        ) });
+    }
+
+    const ordered = applyOrder(defs, order);
+    const orderedIds = ordered.map((d) => d.id);
+
+    // Drag-to-reorder handlers for the tile grid (only active when layout is unlocked)
+    const onPointerDown = (id, e) => {
+        e.currentTarget.setPointerCapture(e.pointerId); // route move/up here even off-tile
+        setDragId(id);
+    };
+    const onPointerMove = (e) => {
+        if (dragId == null) return;
+
+        const tile = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-tile-id]');
+
+        if (!tile) return;
+
+        const id = tile.dataset.tileId;
+        const before = dropBefore(tile.getBoundingClientRect(), e.clientX, e.clientY);
+
+        if (!over || over.id !== id || over.before !== before) setOver({ id, before });
+    };
+    const onPointerUp = () => {
+        if (dragId != null && over && over.id !== dragId) {
+            setOrder(reorder(orderedIds, dragId, over.id, over.before));
+        }
+
+        clearDrag();
+    };
+    const makeDrag = (id) =>
+        locked
+            ? null
+            : {
+                  dragging: dragId === id,
+                  over:
+                      over && over.id === id && dragId !== id
+                          ? over.before ? 'before' : 'after'
+                          : null,
+                  onPointerDown,
+                  onPointerMove,
+                  onPointerUp,
+              };
+
+    return (
+        <>
+            <h1>Operations dashboard</h1>
+            <p className="sub">
+                A single view of stock, sales, customers, revenue, and deliveries.
+            </p>
+
+            {failedSources.length > 0 && (
+                <div className="banner error">
+                    Data sync issue — the following sources failed their last update and may
+                    be showing older data: {failedSources.map((source) => source.source).join(', ')}.
+                </div>
+            )}
+
+            <ExecKpiCards
+                inventory={inventory}
+                sales={sales}
+                revenue={revenue}
+                shipping={shipping}
+                alerts={alerts}
+            />
+
+            <div className="toolbar dash-tools">
+                <button type="button" onClick={() => setLocked(!locked)}>
+                    {locked ? 'Rearrange tiles' : 'Lock layout'}
+                </button>
+                {!locked && (
+                    <span className="dash-hint">Drag the ⠿ handle to reorder tiles.</span>
+                )}
+                {order.length > 0 && (
+                    <button type="button" className="link" onClick={reset}>
+                        Reset order
+                    </button>
+                )}
+            </div>
+
+            <div className="grid">
+                {ordered.map((d) =>
+                    React.cloneElement(d.el, { key: d.id, id: d.id, drag: makeDrag(d.id) }),
                 )}
             </div>
         </>

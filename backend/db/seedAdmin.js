@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 
+// envVars param lets the --check self-test below pass in fake env without touching process.env.
 function adminCreds(envVars) {
     const env = envVars || process.env;
     const provided = Boolean(env.ADMIN_PASSWORD);
@@ -22,7 +23,6 @@ async function seedAdmin() {
     }
 
     const { email, fullName, password, generated } = adminCreds();
-
     await query(
         'INSERT INTO users (email, password_hash, full_name, role) VALUES ($1, $2, $3, $4)',
         [email, bcrypt.hashSync(password, 10), fullName, 'admin']
@@ -39,6 +39,7 @@ async function seedAdmin() {
 }
 
 if (require.main === module) {
+    // --check runs a self-test of adminCreds() instead of actually seeding.
     if (process.argv.includes('--check')) {
         const assert = require('assert');
         const a = adminCreds({});

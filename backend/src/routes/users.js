@@ -1,24 +1,21 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { query } = require('../config/db');
-const { authenticate, requirePermission } = require('../middleware/auth');
+const { query, pool } = require('../config/db');
+const { authenticate, requirePermission, ROLE_PERMISSIONS } = require('../middleware/auth');
 const { asyncRoute } = require('../middleware/errorHandler');
+const { validateId } = require('../middleware/validateId');
 
 const router = express.Router();
+
 router.use(authenticate, requirePermission('users'));
+router.param('id', validateId);
 
-const ROLES = ['admin', 'developer', 'ops_manager', 'marketing', 'partner'];
-
-async function activeAdminCount() {
-    const result = await query(
-        "SELECT COUNT(*)::int AS n FROM users WHERE role = 'admin' AND is_active = TRUE"
-    );
-    return result.rows[0].n;
-}
+const ROLES = Object.keys(ROLE_PERMISSIONS);
 
 router.get('/', asyncRoute(async (req, res) => {
     const sql = 'SELECT id, email, full_name, role, is_active, created_at FROM users ORDER BY id';
     const result = await query(sql);
+
     res.json({ users: result.rows });
 }));
 
@@ -56,20 +53,19 @@ router.post('/', asyncRoute(async (req, res) => {
     if (!result.rows[0]) {
         return res.status(409).json({ error: 'A user with that email already exists.' });
     }
+
     res.status(201).json({ user: result.rows[0] });
 }));
 
 router.patch('/:id', asyncRoute(async (req, res) => {
     const id = Number(req.params.id);
-    if (!Number.isInteger(id)) {
-        return res.status(400).json({ error: 'Invalid user id.' });
-    }
 
     const existingResult = await query(
         'SELECT id, email, full_name, role, is_active FROM users WHERE id = $1',
         [id]
     );
     const current = existingResult.rows[0];
+
     if (!current) {
         return res.status(404).json({ error: 'User not found.' });
     }
@@ -96,21 +92,18 @@ router.patch('/:id', asyncRoute(async (req, res) => {
     // Don't let the last active admin lose admin access.
     const removingAdminRole = role !== undefined && role !== 'admin' && current.role === 'admin';
     const deactivatingAdmin = isActive === false && current.role === 'admin' && current.is_active;
-
-    if (removingAdminRole || deactivatingAdmin) {
-        const admins = await activeAdminCount();
-        if (admins <= 1) {
-            return res.status(400).json({ error: 'This is the last active admin — promote another admin first.' });
-        }
-    }
+    const needsAdminGuard = removingAdminRole || deactivatingAdmin;
 
     if (isActive === false && id === req.user.id) {
         return res.status(400).json({ error: 'You cannot deactivate your own account.' });
     }
 
-    if (fullName !== undefined) {
-        await query('UPDATE users SET full_name = $1 WHERE id = $2', [fullName, id]);
-    }
+    // One atomic UPDATE for whichever fields were sent (no partial writes on mid-failure).
+    const set = [];
+    const values = [];
+    let i = 1;
+
+    if (fullName !== undefined) { set.push(`full_name = $${i++}`); values.push(fullName); }
 
     if (email !== undefined) {
         const normalisedEmail = String(email).toLowerCase().trim();
@@ -121,21 +114,42 @@ router.patch('/:id', asyncRoute(async (req, res) => {
         if (clash.rows[0]) {
             return res.status(409).json({ error: 'Another user already has that email.' });
         }
-        await query('UPDATE users SET email = $1 WHERE id = $2', [normalisedEmail, id]);
+        set.push(`email = $${i++}`); values.push(normalisedEmail);
     }
 
-    if (role !== undefined) {
-        await query('UPDATE users SET role = $1 WHERE id = $2', [role, id]);
-    }
-
-    if (isActive !== undefined) {
-        const activeFlag = Boolean(isActive);
-        await query('UPDATE users SET is_active = $1 WHERE id = $2', [activeFlag, id]);
-    }
-
+    if (role !== undefined) { set.push(`role = $${i++}`); values.push(role); }
+    if (isActive !== undefined) { set.push(`is_active = $${i++}`); values.push(Boolean(isActive)); }
     if (password !== undefined) {
-        const newHash = bcrypt.hashSync(password, 10);
-        await query('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, id]);
+        set.push(`password_hash = $${i++}`); values.push(bcrypt.hashSync(password, 10));
+        // Invalidate the target user's existing sessions when their password is reset.
+        set.push('token_version = token_version + 1');
+    }
+
+    if (set.length > 0) {
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            if (needsAdminGuard) {
+                await client.query("SELECT id FROM users WHERE role = 'admin' AND is_active = TRUE FOR UPDATE");
+                const admins = await client.query(
+                    "SELECT COUNT(*)::int AS n FROM users WHERE role = 'admin' AND is_active = TRUE"
+                );
+                if (admins.rows[0].n <= 1) {
+                    await client.query('ROLLBACK');
+                    return res.status(400).json({ error: 'This is the last active admin — promote another admin first.' });
+                }
+            }
+
+            values.push(id);
+            await client.query(`UPDATE users SET ${set.join(', ')} WHERE id = $${i}`, values);
+            await client.query('COMMIT');
+        } catch (err) {
+            await client.query('ROLLBACK');
+            throw err;
+        } finally {
+            client.release();
+        }
     }
 
     const updated = await query(
@@ -143,36 +157,6 @@ router.patch('/:id', asyncRoute(async (req, res) => {
         [id]
     );
     res.json({ user: updated.rows[0] });
-}));
-
-router.delete('/:id', asyncRoute(async (req, res) => {
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id)) {
-        return res.status(400).json({ error: 'Invalid user id.' });
-    }
-
-    if (id === req.user.id) {
-        return res.status(400).json({ error: 'You cannot delete your own account.' });
-    }
-
-    const existingResult = await query(
-        'SELECT id, role, is_active FROM users WHERE id = $1',
-        [id]
-    );
-    const current = existingResult.rows[0];
-    if (!current) {
-        return res.status(404).json({ error: 'User not found.' });
-    }
-
-    if (current.role === 'admin' && current.is_active) {
-        const admins = await activeAdminCount();
-        if (admins <= 1) {
-            return res.status(400).json({ error: 'This is the last active admin — promote another admin first.' });
-        }
-    }
-
-    await query('DELETE FROM users WHERE id = $1', [id]);
-    res.json({ deleted: true, id: id });
 }));
 
 module.exports = router;
