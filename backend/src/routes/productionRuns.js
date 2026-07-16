@@ -5,6 +5,7 @@ const { asyncRoute } = require('../middleware/errorHandler');
 const { validateId } = require('../middleware/validateId');
 
 const router = express.Router();
+
 router.use(authenticate, requirePermission('manufacturers'));
 router.param('id', validateId);
 
@@ -24,9 +25,11 @@ router.get('/', asyncRoute(async (req, res) => {
         'FROM production_runs pr ' +
         'JOIN manufacturers m ON m.id = pr.manufacturer_id ' +
         'LEFT JOIN products p ON p.id = pr.product_id ' +
-        'ORDER BY pr.created_at DESC';
+        'ORDER BY pr.created_at DESC ' +
+        'LIMIT 1000';
 
     const result = await query(sql);
+
     res.json({ runs: result.rows });
 }));
 
@@ -52,6 +55,7 @@ router.post('/', asyncRoute(async (req, res) => {
         return res.status(400).json({ error: 'quantity must be greater than 0.' });
     }
 
+    // Defaults to 'ordered' in SQL via COALESCE when statusValue is null.
     const productIdValue = productId || null;
     const quantityValue = quantity || null;
     const statusValue = status || null;

@@ -16,6 +16,7 @@ export default function ManufacturerDetail() {
     const [contact, setContact] = useState({ name: '', role: '', email: '', phone: '' });
     const [reorder, setReorder] = useState({ product_id: '', quantity_ordered: '', notes: '' });
     const [metrics, setMetrics] = useState({ lead_time_days: '', min_order_quantity: '', payment_terms: '', quality_rating: '' });
+    const [busy, setBusy] = useState(false);
 
     const load = useCallback(function loadManufacturer() {
         api(`/manufacturers/${id}`)
@@ -29,6 +30,7 @@ export default function ManufacturerDetail() {
         load();
     }, [load]);
 
+    // Seed the metrics form whenever fresh manufacturer data arrives.
     useEffect(function () {
         if (data && data.manufacturer) {
             const m = data.manufacturer;
@@ -41,6 +43,8 @@ export default function ManufacturerDetail() {
         }
     }, [data]);
 
+    // Prefill the reorder form when arriving via a "Reorder" link with a product in the query string.
+    // Only runs once per page load (guarded by the prefilled ref).
     useEffect(function () {
         if (prefilled.current || !data) return;
 
@@ -62,13 +66,17 @@ export default function ManufacturerDetail() {
 
     // POST a sub-resource, then clear its form and reload.
     async function post(path, body, reset) {
+        if (busy) return;
         setError('');
+        setBusy(true);
         try {
             await api(path, { method: 'POST', body: JSON.stringify(body) });
             reset();
             load();
         } catch (e) {
             setError(e.message);
+        } finally {
+            setBusy(false);
         }
     }
 
@@ -97,12 +105,16 @@ export default function ManufacturerDetail() {
     }
 
     async function saveMetrics() {
+        if (busy) return;
         setError('');
+        setBusy(true);
         try {
             await api(`/manufacturers/${id}`, { method: 'PATCH', body: JSON.stringify(metrics) });
             load();
         } catch (e) {
             setError(e.message);
+        } finally {
+            setBusy(false);
         }
     }
 
@@ -228,7 +240,7 @@ export default function ManufacturerDetail() {
                     </p>
 
                     <p>
-                        <button className="primary" onClick={saveMetrics}>Save metrics</button>
+                        <button className="primary" onClick={saveMetrics} disabled={busy}>Save metrics</button>
                     </p>
                 </section>
 
@@ -295,7 +307,7 @@ export default function ManufacturerDetail() {
                     </div>
 
                     <p>
-                        <button className="primary" onClick={submitContact}>
+                        <button className="primary" onClick={submitContact} disabled={busy}>
                             Add contact
                         </button>
                     </p>
@@ -355,7 +367,7 @@ export default function ManufacturerDetail() {
                     </div>
 
                     <p>
-                        <button className="primary" onClick={submitComm}>
+                        <button className="primary" onClick={submitComm} disabled={busy}>
                             Save log entry
                         </button>
                     </p>
@@ -442,7 +454,7 @@ export default function ManufacturerDetail() {
                     </div>
 
                     <p>
-                        <button className="primary" onClick={submitReorder}>
+                        <button className="primary" onClick={submitReorder} disabled={busy}>
                             Log reorder
                         </button>
                     </p>

@@ -14,6 +14,7 @@ export default function Products() {
     const [costEdits, setCostEdits] = useState({});
     const [form, setForm] = useState(EMPTY_FORM);
     const [syncMsg, setSyncMsg] = useState('');
+    const [busy, setBusy] = useState(false);
     const [selected, setSelected] = useState(() => new Set());
     const [bulkMfr, setBulkMfr] = useState('');
     const [bulkThreshold, setBulkThreshold] = useState('');
@@ -51,8 +52,10 @@ export default function Products() {
     }
 
     async function saveRow(product) {
+        if (busy) return;
         const threshold = edits[product.id];
         const cost = costEdits[product.id];
+        setBusy(true);
         try {
             if (threshold !== undefined && threshold !== '') {
                 await api(`/products/${product.id}/threshold`, {
@@ -71,6 +74,8 @@ export default function Products() {
             load();
         } catch (e) {
             setError(e.message);
+        } finally {
+            setBusy(false);
         }
     }
 
@@ -82,6 +87,7 @@ export default function Products() {
         });
     }
 
+    // "All selected" only counts rows currently visible under the active search/filter.
     const allVisibleSelected = view.length > 0 && view.every((p) => selected.has(p.id));
 
     function toggleAllVisible() {
@@ -93,6 +99,7 @@ export default function Products() {
         });
     }
 
+    // Shared runner for bulk actions: applies `apply` to every selected id, then reloads either way.
     async function runBulk(apply) {
         setError('');
         try {
@@ -134,23 +141,30 @@ export default function Products() {
     }
 
     async function syncShopify() {
+        if (busy) return;
         setError('');
         setSyncMsg('Syncing…');
+        setBusy(true);
         try {
             const r = await api('/products/sync-shopify', { method: 'POST' });
-            setSyncMsg(`Added ${r.added} new of ${r.total} Shopify items.`);
+            const skippedNote = r.skipped ? `, ${r.skipped} skipped` : '';
+            setSyncMsg(`Synced ${r.synced} of ${r.total} Shopify items${skippedNote}.`);
             load();
         } catch (e) {
             setSyncMsg('');
             setError(e.message);
+        } finally {
+            setBusy(false);
         }
     }
 
     async function createProduct() {
+        if (busy) return;
         if (!form.sku.trim() || !form.name.trim()) {
             return setError('SKU / item ID and product name are required.');
         }
         setError('');
+        setBusy(true);
         try {
             await api('/products', {
                 method: 'POST',
@@ -165,6 +179,8 @@ export default function Products() {
             load();
         } catch (e) {
             setError(e.message);
+        } finally {
+            setBusy(false);
         }
     }
 
@@ -218,7 +234,7 @@ export default function Products() {
                     />
                 </td>
                 <td>
-                    <button className="link" onClick={() => saveRow(product)}>Save</button>
+                    <button className="link" onClick={() => saveRow(product)} disabled={busy}>Save</button>
                 </td>
             </tr>
         );
@@ -274,8 +290,8 @@ export default function Products() {
                         onKeyDown={onEnter(createProduct)}
                         style={{ maxWidth: 120 }}
                     />
-                    <button className="primary" onClick={createProduct} style={{ flex: '0 0 auto' }}>
-                        Add
+                    <button className="primary" onClick={createProduct} disabled={busy} style={{ flex: '0 0 auto' }}>
+                        {busy ? 'Adding…' : 'Add'}
                     </button>
                 </div>
             </div>
@@ -290,7 +306,7 @@ export default function Products() {
                             setQuery={setQuery}
                             placeholder="Search SKU, product, manufacturer…"
                         />
-                        <button className="link" onClick={syncShopify}>Sync from Shopify</button>
+                        <button className="link" onClick={syncShopify} disabled={busy}>Sync from Shopify</button>
                         {syncMsg && <span style={{ color: 'var(--muted)', fontSize: 13 }}>{syncMsg}</span>}
                     </div>
 

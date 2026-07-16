@@ -3,6 +3,7 @@ const { query } = require('../config/db');
 const env = require('../config/env');
 const shopify = require('../services/integrations/shopify');
 
+// Inserts a new alert unless one is already open/acknowledged for this product.
 async function alertIfLowStock(productId, currentStock, threshold) {
     const result = await query(
         `INSERT INTO reorder_alerts (product_id, stock_level, threshold)
@@ -19,6 +20,7 @@ async function alertIfLowStock(productId, currentStock, threshold) {
 let lastRun = null;
 const getLastStockCheck = () => lastRun;
 
+// Public entry point: records failure state before re-throwing so /health can report it.
 async function runStockCheck() {
     try {
         return await runStockCheckInner();
@@ -82,6 +84,7 @@ async function runStockCheckInner() {
     return summary;
 }
 
+// Registers the recurring cron job; does not run a check immediately.
 function scheduleStockCheck() {
     cron.schedule(env.stockCheckCron, function runScheduledStockCheck() {
         runStockCheck().catch(function handleStockCheckError(err) {

@@ -90,6 +90,7 @@ function SessionWatcher() {
         if (!exp) return;
 
         const msLeft = exp * 1000 - Date.now();
+        // setTimeout delay is a 32-bit int; skip scheduling if it would overflow.
         if (msLeft <= 0 || msLeft > 2147483647) return;
 
         const warnLead = 2 * 60 * 1000;
@@ -190,6 +191,7 @@ function Shell() {
     );
 }
 
+// Top-level route table.
 export default function App() {
     return (
         <Routes>

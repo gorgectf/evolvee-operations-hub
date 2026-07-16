@@ -3,7 +3,7 @@ const cors = require('cors');
 const env = require('./config/env');
 const { query } = require('./config/db');
 const { errorHandler } = require('./middleware/errorHandler');
-const { scheduleStockCheck, runStockCheck, getLastStockCheck } = require('./jobs/stockCheck');
+const { scheduleStockCheck, runStockCheck } = require('./jobs/stockCheck');
 const { ensureSchema } = require('../db/applySchema');
 const { seed } = require('../db/seed');
 const { seedAdmin } = require('../db/seedAdmin');
@@ -11,6 +11,7 @@ const { seedAdmin } = require('../db/seedAdmin');
 const app = express();
 app.set('trust proxy', 1);
 
+// Checks incoming Origin header against the configured allowlist.
 function isAllowedOrigin(origin, callback) {
     // No Origin header (same-origin or server-to-server): allow.
     if (!origin) {
@@ -24,24 +25,22 @@ function isAllowedOrigin(origin, callback) {
 app.use(cors({ origin: isAllowedOrigin }));
 app.use(express.json());
 
+// Basic security headers on every response.
+app.use(function securityHeaders(req, res, next) {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    if (env.isProduction) {
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    next();
+});
+
 app.get('/api/health', async function (req, res) {
-    const sc = getLastStockCheck();
-    const health = {
-        ok: true,
-        time: new Date().toISOString(),
-        stock_check: sc && {
-            ran_at: sc.ran_at,
-            ok: sc.ok,
-            checked: sc.checked,
-            alerts_created: sc.alerts_created,
-        },
-    };
+    const health = { ok: true, time: new Date().toISOString() };
 
     try {
-        const result = await query(
-            'SELECT source, ok, last_run_at, last_success FROM sync_status ORDER BY source'
-        );
-        health.sources = result.rows;
+        const result = await query('SELECT ok FROM sync_status');
         health.degraded = result.rows.some(function (r) { return r.ok === false; });
     } catch (err) {
         health.ok = false;
@@ -51,6 +50,7 @@ app.get('/api/health', async function (req, res) {
     res.status(health.ok ? 200 : 503).json(health);
 });
 
+// Route mounts
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/dashboard', require('./routes/dashboard'));
@@ -89,6 +89,14 @@ async function startBackgroundTasks() {
         console.error('[stock-check] startup run failed:', err.message);
     });
 }
+
+// Last-resort logging so unexpected errors don't crash silently.
+process.on('unhandledRejection', function (reason) {
+    console.error('Unhandled promise rejection:', reason);
+});
+process.on('uncaughtException', function (err) {
+    console.error('Uncaught exception:', err);
+});
 
 app.listen(env.port, function () {
     console.log('Operations Hub backend running on port ' + env.port);

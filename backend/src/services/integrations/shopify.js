@@ -251,6 +251,7 @@ async function getStockLevels() {
 
         const bySku = {};
         const itemToSku = {};
+
         for (const p of products) {
             const image = (p.image && p.image.src) || null;
 
@@ -440,4 +441,14 @@ async function getMonthlyRevenue() {
     });
 }
 
-module.exports = cacheAll('shopify', { getSalesOverview, getTopCustomers, getCustomerPurchases, getDailyRevenue, getStockLevels, getMonthlyRevenue, getTodayOrders, getSalesTrend, getTrackings });
+module.exports = cacheAll('shopify', {
+    getSalesOverview,
+    getTopCustomers,
+    getCustomerPurchases,
+    getDailyRevenue,
+    getStockLevels,
+    getMonthlyRevenue,
+    getTodayOrders,
+    getSalesTrend,
+    getTrackings
+});

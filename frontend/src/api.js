@@ -16,6 +16,10 @@ export function setSession(token, user) {
     localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
+export function setToken(token) {
+    localStorage.setItem(TOKEN_KEY, token);
+}
+
 export function clearSession() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
@@ -38,13 +42,11 @@ export function getEffectivePermissions() {
     const real = user.permissions || [];
     const viewAs = getViewAsRole();
     const map = user.role_permissions;
+    // Not previewing as another role, or role has no defined permission set.
     if (!viewAs || !map || !map[viewAs]) return real;
 
+    // Intersect the previewed role's permissions with what the real user actually has.
     return map[viewAs].filter((p) => real.includes(p));
-}
-
-export function getEffectiveRole() {
-    return getViewAsRole() || getUser()?.role || null;
 }
 
 export function viewableRoles() {
@@ -53,6 +55,7 @@ export function viewableRoles() {
     if (!map) return [];
 
     const real = user.permissions || [];
+    // Only offer roles that are a subset of what the user can already do.
     return Object.keys(map).filter(
         (role) => role !== user.role && map[role].every((p) => real.includes(p))
     );
@@ -63,6 +66,7 @@ export function getTokenExp() {
     if (!token) return null;
 
     try {
+        // Decode the JWT payload (base64url, no signature check needed client-side).
         const payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
         const claims = JSON.parse(atob(payload));
         return typeof claims.exp === 'number' ? claims.exp : null;
@@ -100,7 +104,7 @@ export async function api(path, options = {}) {
 
     const response = await fetch(`${BASE}/api${path}`, { ...options, headers });
 
-    // Read the JSON body if there is one.
+    // Read the JSON body if there is one; not all responses have one (e.g. 204).
     let data = null;
     try {
         data = await response.json();

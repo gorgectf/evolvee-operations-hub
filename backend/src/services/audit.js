@@ -1,5 +1,6 @@
 const { query } = require('../config/db');
 
+// Best-effort audit logging; failures here should never break the calling request.
 async function recordAudit(req, { action, entity, entityId, details }) {
     try {
         await query(

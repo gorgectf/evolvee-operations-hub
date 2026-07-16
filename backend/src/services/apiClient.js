@@ -9,6 +9,17 @@ function getHost(url) {
     return parsed.host;
 }
 
+// Retry-After is either a number of seconds or an HTTP-date. Number() alone turns
+// the date form into NaN and the server's wait hint is silently lost.
+function parseRetryAfter(header) {
+    if (!header) return 0;
+    const seconds = Number(header);
+    if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+    const dateMs = Date.parse(header);
+    if (!Number.isNaN(dateMs)) return Math.max(0, dateMs - Date.now());
+    return 0;
+}
+
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function attempt(url, options, config, timeoutMs) {
@@ -30,11 +41,25 @@ async function attempt(url, options, config, timeoutMs) {
             const host = getHost(url);
             const err = new Error(`HTTP ${response.status} from ${host}: ${body.slice(0, 200)}`);
             err.status = response.status;
-            err.retryAfterMs = Number(response.headers.get('retry-after') || 0) * 1000;
+            err.retryAfterMs = parseRetryAfter(response.headers.get('retry-after'));
             throw err;
         }
 
-        const json = await response.json();
+        // 204/empty body has nothing to parse.
+        if (response.status === 204) {
+            return config.includeHeaders ? { data: null, headers: response.headers } : null;
+        }
+
+        let json;
+        try {
+            json = await response.json();
+        } catch (parseError) {
+            // A malformed/empty 2xx body is a deterministic contract error, not a
+            // transient network fault — flag it so shouldRetry() won't retry it.
+            const err = new Error(`Invalid JSON from ${getHost(url)}: ${parseError.message}`);
+            err.parse = true;
+            throw err;
+        }
         return config.includeHeaders ? { data: json, headers: response.headers } : json;
     } catch (error) {
         if (error.name === 'AbortError') {
@@ -43,7 +68,7 @@ async function attempt(url, options, config, timeoutMs) {
             timeoutErr.timeout = true;
             throw timeoutErr;
         }
-        if (error.status == null) {
+        if (error.status == null && !error.parse) {
             error.network = true;
         }
         throw error;
@@ -55,10 +80,12 @@ async function attempt(url, options, config, timeoutMs) {
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 const MAX_BACKOFF_MS = 8000;
 
-function shouldRetry(error, method, attemptsLeft) {
+function shouldRetry(error, retryableMethod, attemptsLeft) {
     if (attemptsLeft <= 0) return false;
-    if (method !== 'GET' && method !== 'HEAD') return false;
+    if (!retryableMethod) return false;
+
     if (error.status != null) return RETRYABLE_STATUS.has(error.status);
+
     return error.timeout === true || error.network === true;
 }
 
@@ -73,12 +100,15 @@ async function callExternal(url, options = {}, config = {}) {
     const maxRetries = config.retries ?? 3;
     const baseMs = config.retryBaseMs ?? 500;
     const method = (options.method || 'GET').toUpperCase();
+    // GET/HEAD retry by default; a read-only POST (e.g. a GraphQL query) can opt in
+    // with config.idempotent so transient 429/5xx get the same backoff.
+    const retryableMethod = method === 'GET' || method === 'HEAD' || config.idempotent === true;
 
     for (let attemptNo = 0; ; attemptNo++) {
         try {
             return await attempt(url, options, config, timeoutMs);
         } catch (error) {
-            if (!shouldRetry(error, method, maxRetries - attemptNo)) throw error;
+            if (!shouldRetry(error, retryableMethod, maxRetries - attemptNo)) throw error;
             await wait(backoffMs(attemptNo, error.retryAfterMs || 0, baseMs));
         }
     }
@@ -110,12 +140,15 @@ const cacheStore = new Map();
 
 function cached(key, fn) {
     const hit = cacheStore.get(key);
+
     if (hit && Date.now() - hit.at < CACHE_TTL_MS) {
         return hit.value;
     }
+
     const value = Promise.resolve().then(fn);
     cacheStore.set(key, { at: Date.now(), value });
     value.catch(() => cacheStore.delete(key));
+
     return value;
 }
 
@@ -163,14 +196,20 @@ if (require.main === module) {
         await cached('e', () => Promise.resolve(++boom));
         assert.strictEqual(boom, 1);
 
-        // Retry policy: idempotent + transient only, never a POST.
-        assert.strictEqual(shouldRetry({ status: 429 }, 'GET', 3), true);
-        assert.strictEqual(shouldRetry({ status: 503 }, 'GET', 3), true);
-        assert.strictEqual(shouldRetry({ status: 404 }, 'GET', 3), false);
-        assert.strictEqual(shouldRetry({ status: 429 }, 'POST', 3), false);
-        assert.strictEqual(shouldRetry({ timeout: true }, 'GET', 3), true);
-        assert.strictEqual(shouldRetry({ network: true }, 'GET', 3), true);
-        assert.strictEqual(shouldRetry({ timeout: true }, 'GET', 0), false);
+        // Retry policy: transient statuses on a retryable method only.
+        assert.strictEqual(shouldRetry({ status: 429 }, true, 3), true);
+        assert.strictEqual(shouldRetry({ status: 503 }, true, 3), true);
+        assert.strictEqual(shouldRetry({ status: 404 }, true, 3), false);
+        assert.strictEqual(shouldRetry({ status: 429 }, false, 3), false);   // non-idempotent POST
+        assert.strictEqual(shouldRetry({ timeout: true }, true, 3), true);
+        assert.strictEqual(shouldRetry({ network: true }, true, 3), true);
+        assert.strictEqual(shouldRetry({ parse: true }, true, 3), false);    // parse error never retried
+        assert.strictEqual(shouldRetry({ timeout: true }, true, 0), false);
+        // Retry-After: seconds and HTTP-date both yield a non-negative ms hint.
+        assert.strictEqual(parseRetryAfter('120'), 120000);
+        assert.strictEqual(parseRetryAfter(null), 0);
+        assert.ok(parseRetryAfter('Wed, 21 Oct 2099 07:28:00 GMT') > 0);
+        assert.strictEqual(parseRetryAfter('not-a-date'), 0);
         const b0 = backoffMs(0, 0, 500);
         assert.ok(b0 >= 250 && b0 <= 500, `backoff ${b0} out of range`);
         assert.strictEqual(backoffMs(5, 3000, 500), 3000);

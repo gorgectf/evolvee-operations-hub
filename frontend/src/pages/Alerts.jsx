@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { useTableView, SortHeader, SearchBox, useFlash } from '../ui.jsx';
@@ -17,11 +17,14 @@ export default function Alerts() {
     const [checking, setChecking] = useState(false);
     const [filter, setFilter] = useState('');
     const { query, setQuery, view, sort, toggleSort } = useTableView(alerts, ['sku', 'product_name', 'manufacturer']);
+    const loadSeq = useRef(0);
 
     function load() {
+        // Guard against a stale response landing after a newer request (e.g. filter changed mid-flight).
+        const seq = ++loadSeq.current;
         api(`/alerts${filter ? `?status=${filter}` : ''}`)
-            .then((data) => setAlerts(data.alerts))
-            .catch((e) => setError(e.message));
+            .then((data) => { if (seq === loadSeq.current) setAlerts(data.alerts); })
+            .catch((e) => { if (seq === loadSeq.current) setError(e.message); });
     }
 
     useEffect(() => {
@@ -78,7 +81,7 @@ export default function Alerts() {
     function statusClass(status) {
         if (status === 'open') return 'low';
         if (status === 'acknowledged') return 'warn';
-        
+
         return 'ok';
     }
 

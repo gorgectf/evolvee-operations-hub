@@ -13,6 +13,7 @@ let cached = { token: null, expiresAt: 0 };
 async function getZohoAccessToken() {
     // Reuse the cached token until it is within a minute of expiry.
     const safetyWindowMs = 60000;
+
     if (cached.token && Date.now() < cached.expiresAt - safetyWindowMs) {
         return cached.token;
     }
@@ -42,7 +43,15 @@ async function getZohoAccessToken() {
         token: data.access_token,
         expiresAt: Date.now() + (expiresInSeconds * 1000)
     };
+
     return cached.token;
 }
 
-module.exports = { getZohoAccessToken };
+// Invalidate the cache so the next getZohoAccessToken() forces a refresh. Call this
+// when the CRM API rejects the cached token with a 401 (revoked/rotated early), so a
+// dead token isn't reused for the rest of its nominal lifetime.
+function clearZohoToken() {
+    cached = { token: null, expiresAt: 0 };
+}
+
+module.exports = { getZohoAccessToken, clearZohoToken };

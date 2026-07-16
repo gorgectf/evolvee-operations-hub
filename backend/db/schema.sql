@@ -8,8 +8,13 @@ CREATE TABLE IF NOT EXISTS users (
     full_name     TEXT NOT NULL,
     role          TEXT NOT NULL CHECK (role IN ('admin','developer','ops_manager','marketing','partner')),
     is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+    -- Bumped on password change / reset to invalidate previously issued JWTs.
+    token_version INTEGER NOT NULL DEFAULT 0,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- For databases created before token_version existed:
+ALTER TABLE users ADD COLUMN IF NOT EXISTS token_version INTEGER NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS manufacturers (
     id                 SERIAL PRIMARY KEY,
@@ -134,6 +139,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- NULL values don't violate uniqueness, so products without a Shopify id are unaffected.
 CREATE UNIQUE INDEX IF NOT EXISTS idx_products_shopify_iid ON products(shopify_inventory_item_id);
 CREATE INDEX IF NOT EXISTS idx_alerts_status   ON reorder_alerts(status);
 -- At most one open/acknowledged alert per product, makes the stock-check insert race-safe.

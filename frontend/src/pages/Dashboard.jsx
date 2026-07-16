@@ -30,6 +30,7 @@ function formatCount(value) {
     return Number(value || 0).toLocaleString('en-GB');
 }
 
+// Builds the top KPI strip from whichever modules the user has access to.
 function ExecKpiCards({ inventory, sales, revenue, shipping, alerts }) {
     const cards = [];
 
@@ -330,7 +331,7 @@ export default function Dashboard() {
 
     const inventory = useModule('/dashboard/inventory', canAccess('inventory'));
     const sales = useModule('/dashboard/sales', canAccess('sales'));
-    const productPerf = useModule('/dashboard/product-performance', canAccess('sales'));
+    const productPerf = useModule('/dashboard/product-performance', canAccess('revenue'));
     const customers = useModule('/dashboard/customers', canAccess('customers'));
     const revenue = useModule('/dashboard/revenue', canAccess('revenue'));
     const shipping = useModule('/dashboard/shipping', canAccess('shipping'), 30000);
@@ -341,6 +342,7 @@ export default function Dashboard() {
     // Sources that failed their most recent sync
     const failedSources = (sync.data?.sources || []).filter((source) => source.ok === false);
 
+    // Tile order + lock state, persisted to localStorage
     const layout = useDashboardLayout();
     const { order, setOrder, locked, setLocked, reset } = layout;
 
@@ -480,7 +482,7 @@ export default function Dashboard() {
                     </Tile>
         ) });
     }
-    if (canAccess('sales')) {
+    if (canAccess('revenue')) {
         defs.push({ id: 'product-performance', el: (
                     <Tile title="Product performance — last 30 days" source="Shopify" wide>
                         <Body state={productPerf}>
@@ -644,6 +646,7 @@ export default function Dashboard() {
     const ordered = applyOrder(defs, order);
     const orderedIds = ordered.map((d) => d.id);
 
+    // Drag-to-reorder handlers for the tile grid (only active when layout is unlocked)
     const onPointerDown = (id, e) => {
         e.currentTarget.setPointerCapture(e.pointerId); // route move/up here even off-tile
         setDragId(id);

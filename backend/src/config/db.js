@@ -1,6 +1,7 @@
 const { Pool, types } = require('pg');
 const env = require('./env');
 
+// Keep DATE columns as raw strings instead of parsing to a JS Date (avoids timezone shift).
 types.setTypeParser(1082, (value) => value);
 
 function isLocalhost(connectionString) {
@@ -12,6 +13,7 @@ function isLocalhost(connectionString) {
   }
 }
 
+// Decides the SSL config for the pg pool based on env overrides and connection target.
 function databaseSsl() {
   const override = (env.databaseSsl || '').trim().toLowerCase();
 
@@ -19,6 +21,7 @@ function databaseSsl() {
     return false;
   }
 
+  // Default to no SSL for local dev unless explicitly overridden.
   if (override !== 'true' && override !== 'no-verify' && isLocalhost(env.databaseUrl)) {
     return false;
   }
@@ -36,6 +39,7 @@ function databaseSsl() {
     return { rejectUnauthorized: false };
   }
 
+  // No CA and no explicit override: refuse an unverified connection in production.
   if (env.isProduction) {
     throw new Error(
       'Refusing an unverified database TLS connection in production. ' +

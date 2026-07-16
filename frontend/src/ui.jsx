@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { selectRows, toCsv } from './tableView.js';
 
+// Combines search + sort state with the derived, filtered rows.
 export function useTableView(rows, searchFields) {
     const [query, setQuery] = useState('');
     const [sort, setSort] = useState({ key: null, dir: 1 });
@@ -46,7 +47,8 @@ export function ExportButton({ filename, columns, rows, label }) {
         const csv = toCsv(columns, rows);
         const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
         const link = document.createElement('a');
-        
+
+        // Trigger a download without navigating away.
         link.href = url;
         link.download = filename;
         link.click();
@@ -62,12 +64,17 @@ export function ExportButton({ filename, columns, rows, label }) {
 
 export function CopyText({ value }) {
     const [copied, setCopied] = useState(false);
+    const timerRef = useRef(null);
+
+    useEffect(() => () => clearTimeout(timerRef.current), []);
 
     function copy() {
         if (!navigator.clipboard) return;
+
         navigator.clipboard.writeText(value).then(() => {
             setCopied(true);
-            setTimeout(() => setCopied(false), 1200);
+            clearTimeout(timerRef.current);
+            timerRef.current = setTimeout(() => setCopied(false), 1200);
         });
     }
 
@@ -84,9 +91,10 @@ export function onEnter(fn) {
     };
 }
 
+// Shows a message for a set duration, then clears it.
 export function useFlash(ms = 3000) {
     const [msg, setMsg] = useState('');
-    
+
     useEffect(() => {
         if (!msg) return;
 

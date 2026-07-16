@@ -13,6 +13,7 @@ export default function Users() {
     // Which user's password is being reset, and the value typed so far.
     const [resetId, setResetId] = useState(null);
     const [resetPwd, setResetPwd] = useState('');
+    const [busy, setBusy] = useState(false);
     const { query, setQuery, view, sort, toggleSort } = useTableView(users, ['full_name', 'email', 'role']);
 
     function load() {
@@ -28,13 +29,18 @@ export default function Users() {
     }
 
     async function createUser() {
+        if (busy) return;
+
         setError('');
+        setBusy(true);
         try {
             await api('/users', { method: 'POST', body: JSON.stringify(form) });
             setForm(EMPTY_FORM);
-            load();
+            await load();
         } catch (e) {
             setError(e.message);
+        } finally {
+            setBusy(false);
         }
     }
 
@@ -47,6 +53,7 @@ export default function Users() {
         }
     }
 
+    // Only one row's password reset form is open at a time, tracked by user id.
     function startReset(user) {
         setError('');
         setResetPwd('');
@@ -59,13 +66,19 @@ export default function Users() {
     }
 
     async function submitReset(user) {
+        if (busy) return;
         if (resetPwd.length < 8) {
             setError('Password must be at least 8 characters.');
             return;
         }
         setError('');
-        await patchUser(user.id, { password: resetPwd });
-        cancelReset();
+        setBusy(true);
+        try {
+            await patchUser(user.id, { password: resetPwd });
+            cancelReset();
+        } finally {
+            setBusy(false);
+        }
     }
 
     function renderRoleOptions() {
@@ -115,8 +128,8 @@ export default function Users() {
                                 onKeyDown={onEnter(() => submitReset(user))}
                                 style={{ maxWidth: 170 }}
                             />
-                            <button className="link" onClick={() => submitReset(user)}>Set</button>
-                            <button className="link" onClick={cancelReset}>Cancel</button>
+                            <button className="link" onClick={() => submitReset(user)} disabled={busy}>Set</button>
+                            <button className="link" onClick={cancelReset} disabled={busy}>Cancel</button>
                         </span>
                     ) : (
                         <button className="link" onClick={() => startReset(user)}>
@@ -165,8 +178,8 @@ export default function Users() {
                     >
                         {renderRoleOptions()}
                     </select>
-                    <button className="primary" onClick={createUser} style={{ flex: '0 0 auto' }}>
-                        Add
+                    <button className="primary" onClick={createUser} disabled={busy} style={{ flex: '0 0 auto' }}>
+                        {busy ? 'Adding…' : 'Add'}
                     </button>
                 </div>
             </div>

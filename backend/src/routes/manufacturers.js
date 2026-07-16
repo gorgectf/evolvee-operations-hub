@@ -6,6 +6,7 @@ const { validateId } = require('../middleware/validateId');
 const { recordAudit } = require('../services/audit');
 
 const router = express.Router();
+
 router.use(authenticate, requirePermission('manufacturers'));
 router.param('id', validateId);
 
@@ -26,6 +27,7 @@ router.get('/', asyncRoute(async (req, res) => {
         'ORDER BY m.name';
 
     const result = await query(sql);
+
     res.json({ manufacturers: result.rows });
 }));
 
@@ -45,6 +47,7 @@ router.get('/:id', asyncRoute(async (req, res) => {
         return res.status(404).json({ error: 'Manufacturer not found.' });
     }
 
+    // Load everything related to this manufacturer in parallel.
     const contactsSql =
         'SELECT * FROM manufacturer_contacts WHERE manufacturer_id = $1 ORDER BY name';
 
@@ -139,6 +142,7 @@ router.patch('/:id', asyncRoute(async (req, res) => {
     const put = (col, val) => { set.push(`${col} = $${i++}`); values.push(val); changed[col] = val; };
     const numOrNull = (v) => (v === '' || v == null ? null : v);
 
+    // Build the SET clause dynamically from whichever fields were sent.
     if ('name' in body) put('name', body.name);
     if ('country' in body) put('country', body.country || null);
     if ('notes' in body) put('notes', body.notes || null);

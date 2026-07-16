@@ -6,6 +6,7 @@ const { validateId } = require('../middleware/validateId');
 const { runStockCheck } = require('../jobs/stockCheck');
 
 const router = express.Router();
+
 router.use(authenticate, requirePermission('alerts'));
 router.param('id', validateId);
 
@@ -14,6 +15,7 @@ router.get('/', asyncRoute(async (req, res) => {
 
     let whereClause = '';
     let params = [];
+
     if (status) {
         whereClause = 'WHERE ra.status = $1';
         params = [status];
@@ -28,6 +30,7 @@ router.get('/', asyncRoute(async (req, res) => {
         'ORDER BY ra.triggered_at DESC LIMIT 200';
 
     const result = await query(sql, params);
+
     res.json({ alerts: result.rows });
 }));
 
@@ -50,18 +53,22 @@ router.patch('/:id', asyncRoute(async (req, res) => {
     const result = await query(sql, [status, id]);
 
     const alert = result.rows[0];
+
     if (!alert) {
         return res.status(404).json({ error: 'Alert not found.' });
     }
+
     res.json({ alert: alert });
 }));
 
 router.delete('/:id', asyncRoute(async (req, res) => {
     const id = Number(req.params.id);
     const result = await query('DELETE FROM reorder_alerts WHERE id = $1 RETURNING id', [id]);
+
     if (!result.rows[0]) {
         return res.status(404).json({ error: 'Alert not found.' });
     }
+
     res.json({ deleted: id });
 }));
 
