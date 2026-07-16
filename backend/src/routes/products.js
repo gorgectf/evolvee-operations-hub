@@ -44,13 +44,17 @@ router.get('/:id', asyncRoute(async (req, res) => {
     if (!product) {
         return res.status(404).json({ error: 'Product not found.' });
     }
+    const safe = (p, fallback, label) => p.catch((err) => {
+        console.error(`[products] ${label} unavailable —`, err.message);
+        return fallback;
+    });
 
     // Fetch everything needed for the detail view in parallel.
     const [stock, sales, trend, reviews, reorderHistory, productionRuns] = await Promise.all([
-        shopify.getStockLevels(),
-        shopify.getSalesOverview(),
-        shopify.getSalesTrend(),
-        shopifyReviews.getReviews(),
+        safe(shopify.getStockLevels(), [], 'stock'),
+        safe(shopify.getSalesOverview(), [], 'sales'),
+        safe(shopify.getSalesTrend(), {}, 'trend'),
+        safe(shopifyReviews.getReviews(), [], 'reviews'),
         query(
             'SELECT rh.*, m.name AS manufacturer_name FROM reorder_history rh ' +
             'LEFT JOIN manufacturers m ON m.id = rh.manufacturer_id ' +

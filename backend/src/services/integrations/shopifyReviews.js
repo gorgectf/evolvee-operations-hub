@@ -40,7 +40,7 @@ async function getReviews() {
         const query =
             'query($after: String) { metaobjects(type: "product_review", first: 250, after: $after) { ' +
             'pageInfo { hasNextPage endCursor } ' +
-            'edges { node { id fields { key value } product: field(key: "product") { reference { ... on Product { variants(first: 1) { edges { node { sku } } } } } } } } }';
+            'edges { node { id fields { key value } product: field(key: "product") { reference { ... on Product { variants(first: 1) { edges { node { sku } } } } } } } } } }';
 
         const reviews = [];
         let after = null;
