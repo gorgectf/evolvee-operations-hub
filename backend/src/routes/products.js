@@ -94,29 +94,34 @@ router.get('/:id', asyncRoute(async (req, res) => {
     });
 }));
 
+function buildProductUpsert(items) {
+    const values = [];
+    const rows = items.map((item, n) => {
+        const b = n * 3;
+        values.push(item.sku, item.name, item.inventory_item_id || null);
+        return `($${b + 1}, $${b + 2}, $${b + 3})`;
+    });
+    return { placeholders: rows.join(', '), values };
+}
+
 router.post('/sync-shopify', asyncRoute(async (req, res) => {
     const stock = await shopify.getStockLevels();
 
+    const withSku = stock.filter((item) => item.sku);
+    const skipped = stock.length - withSku.length;
+
     let synced = 0;
-    let skipped = 0;
-
-    for (const item of stock) {
-        if (!item.sku) { skipped += 1; continue; }
-
-        try {
-            await query(
-                'INSERT INTO products (sku, name, shopify_inventory_item_id) ' +
-                'VALUES ($1, $2, $3) ' +
-                'ON CONFLICT (sku) DO UPDATE SET ' +
-                '    name = EXCLUDED.name, ' +
-                '    shopify_inventory_item_id = COALESCE(products.shopify_inventory_item_id, EXCLUDED.shopify_inventory_item_id)',
-                [item.sku, item.name, item.inventory_item_id || null]
-            );
-            synced += 1;
-        } catch (err) {
-            console.error('[sync-shopify] skipped', item.sku, '—', err.message);
-            skipped += 1;
-        }
+    if (withSku.length > 0) {
+        const { placeholders, values } = buildProductUpsert(withSku);
+        await query(
+            'INSERT INTO products (sku, name, shopify_inventory_item_id) VALUES ' +
+            placeholders +
+            ' ON CONFLICT (sku) DO UPDATE SET ' +
+            '    name = EXCLUDED.name, ' +
+            '    shopify_inventory_item_id = COALESCE(products.shopify_inventory_item_id, EXCLUDED.shopify_inventory_item_id)',
+            values
+        );
+        synced = withSku.length;
     }
 
     res.json({ synced: synced, skipped: skipped, total: stock.length });
@@ -316,5 +321,16 @@ router.put('/:id/cost', asyncRoute(async (req, res) => {
 
     res.json({ product: result.rows[0] });
 }));
+
+if (require.main === module) {
+    const assert = require('assert');
+    const { placeholders, values } = buildProductUpsert([
+        { sku: 'A', name: 'Alpha', inventory_item_id: '111' },
+        { sku: 'B', name: 'Beta' },
+    ]);
+    assert.strictEqual(placeholders, '($1, $2, $3), ($4, $5, $6)');
+    assert.deepStrictEqual(values, ['A', 'Alpha', '111', 'B', 'Beta', null]);
+    console.log('buildProductUpsert self-check passed.');
+}
 
 module.exports = router;

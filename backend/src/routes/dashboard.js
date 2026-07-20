@@ -118,11 +118,10 @@ router.get('/customers', requirePermission('customers'), asyncRoute(async (req, 
         crmByEmail[(c.email || '').toLowerCase()] = c;
     }
 
-    shop.sort(function (a, b) {
-        return b.total_spent - a.total_spent;
-    });
-
-    const topTen = shop.slice(0, 10);
+    const topTen = shop
+        .slice()
+        .sort(function (a, b) { return b.total_spent - a.total_spent; })
+        .slice(0, 10);
 
     const customers = [];
     for (const c of topTen) {
@@ -140,7 +139,7 @@ router.get('/customers', requirePermission('customers'), asyncRoute(async (req, 
             }
         }
 
-        const purchase = purchases[c.email];
+        const purchase = purchases[(c.email || '').toLowerCase()];
 
         const customer = Object.assign({}, c);
         customer.segment = segment;

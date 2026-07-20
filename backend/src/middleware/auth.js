@@ -18,10 +18,8 @@ const ROLE_PERMISSIONS = {
 };
 
 function extractBearerToken(authorizationHeader) {
-    if (!authorizationHeader.startsWith('Bearer ')) {
-        return null;
-    }
-    return authorizationHeader.slice(7);
+    const match = /^Bearer +(.+)$/i.exec(authorizationHeader);
+    return match ? match[1] : null;
 }
 
 async function authenticate(req, res, next) {
