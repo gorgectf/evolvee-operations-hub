@@ -105,6 +105,14 @@ function ExecKpiCards({ inventory, sales, revenue, shipping, alerts }) {
             value: formatCount(alerts.data.open_count),
             bad: alerts.data.open_count > 0,
         });
+        if (alerts.data.critical_count > 0) {
+            cards.push({
+                key: 'alerts-critical',
+                label: 'Critical alerts',
+                value: formatCount(alerts.data.critical_count),
+                bad: true,
+            });
+        }
     }
 
     if (cards.length === 0) return null;
@@ -262,6 +270,12 @@ function stockPill(isLowStock) {
     return <span className="pill ok">OK</span>;
 }
 
+function severityPill(severity) {
+    if (severity === 'critical') return <span className="pill low">Critical</span>;
+
+    return <span className="pill warn">Warning</span>;
+}
+
 function shippingStatusClass(status) {
     if (status === 'Delivered') return 'ok';
     if (status === 'Exception') return 'low';
@@ -377,6 +391,14 @@ export default function Dashboard() {
                                                 </div>
                                                 <div className="l">
                                                     SKUs / item IDs need reordering
+                                                    {data.critical_count > 0 && (
+                                                        <>
+                                                            {' · '}
+                                                            <strong style={{ color: 'var(--bad)' }}>
+                                                                {data.critical_count} critical
+                                                            </strong>
+                                                        </>
+                                                    )}
                                                     <NewAlertsBadge count={data.open_count} />
                                                 </div>
                                             </div>
@@ -387,6 +409,7 @@ export default function Dashboard() {
                                             limit={5}
                                             copyKey="sku"
                                             columns={[
+                                                { label: 'Severity', key: 'severity', render: (a) => severityPill(a.severity) },
                                                 { label: 'SKU / Item ID', key: 'sku' },
                                                 { label: 'Product', key: 'name' },
                                                 { label: 'Stock', key: 'stock_level', num: true },

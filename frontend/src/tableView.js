@@ -1,4 +1,4 @@
-export function compareValues(a, b) {
+﻿export function compareValues(a, b) {
     // Nulls always sort to the end, regardless of sort direction.
     if (a == null && b == null) return 0;
     if (a == null) return 1;
@@ -8,14 +8,36 @@ export function compareValues(a, b) {
     return String(a).localeCompare(String(b), undefined, { numeric: true });
 }
 
+export function normalizeText(value) {
+    return String(value ?? '')
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+}
+
+export function parseQuery(query) {
+    const terms = [];
+    const re = /(-)?(?:"([^"]*)"|(\S+))/g;
+    let match;
+    while ((match = re.exec(query || '')) !== null) {
+        const text = normalizeText(match[2] !== undefined ? match[2] : match[3]);
+        if (text) terms.push({ negate: match[1] === '-', text });
+    }
+    return terms;
+}
+
 export function selectRows(rows, searchFields, query, sort) {
-    const q = (query || '').trim().toLowerCase();
+    const terms = parseQuery(query);
     let view = rows || [];
 
-    if (q) {
-        view = view.filter((row) =>
-            searchFields.some((field) => String(row[field] ?? '').toLowerCase().includes(q))
-        );
+    if (terms.length) {
+        view = view.filter((row) => {
+            const haystack = searchFields.map((field) => normalizeText(row[field]));
+            return terms.every(({ negate, text }) => {
+                const hit = haystack.some((value) => value.includes(text));
+                return negate ? !hit : hit;
+            });
+        });
     }
 
     if (sort && sort.key) {

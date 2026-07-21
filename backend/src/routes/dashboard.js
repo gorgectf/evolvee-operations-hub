@@ -5,6 +5,7 @@ const { asyncRoute } = require('../middleware/errorHandler');
 const shopify = require('../services/integrations/shopify');
 const zohoCrm = require('../services/integrations/zohoCrm');
 const { computeProductMetrics } = require('../services/productMetrics');
+const { sortBySeverity } = require('../services/alertSeverity');
 
 const router = express.Router();
 
@@ -210,19 +211,20 @@ router.get('/shipping', requirePermission('shipping'), asyncRoute(async (req, re
 router.get('/alerts-summary', requirePermission('alerts'), asyncRoute(async (req, res) => {
     const sql =
         'SELECT ra.id, p.sku, p.name, ra.stock_level, ra.threshold, ra.status, ra.triggered_at, ' +
-        '       m.name AS manufacturer, COUNT(*) OVER()::int AS total_open ' +
+        '       m.name AS manufacturer ' +
         'FROM reorder_alerts ra ' +
         'JOIN products p ON p.id = ra.product_id ' +
         'LEFT JOIN manufacturers m ON m.id = p.manufacturer_id ' +
-        "WHERE ra.status = 'open' " +
-        'ORDER BY ra.triggered_at DESC ' +
-        'LIMIT 20';
+        "WHERE ra.status = 'open'";
 
     const result = await query(sql);
+    const ranked = sortBySeverity(result.rows);
+    const criticalCount = ranked.filter((a) => a.severity === 'critical').length;
 
     res.json({
-        open_alerts: result.rows,
-        open_count: result.rows.length > 0 ? result.rows[0].total_open : 0
+        open_alerts: ranked.slice(0, 20),
+        open_count: ranked.length,
+        critical_count: criticalCount
     });
 }));
 
