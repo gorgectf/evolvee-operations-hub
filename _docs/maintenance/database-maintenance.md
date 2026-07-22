@@ -22,7 +22,7 @@ retention window in the Render dashboard. That covers most cases. For a manual s
 before anything risky (a schema change, a bulk edit):
 
 ```powershell
-pg_dump $env:DATABASE_URL --format=custom --file="opshub-backup-YYYY-MM-DD.dump"
+pg_dump $env:DATABASE_URL --format=custom --file="opshub-backup-2026-07-21.dump"
 ```
 
 Use the custom format (`--format=custom`); it restores with `pg_restore` and is smaller.
@@ -33,7 +33,7 @@ Keep a couple of these somewhere off the server before any migration.
 A backup you've never restored is a guess. List its contents without touching any database:
 
 ```powershell
-pg_restore --list "opshub-backup-YYYY-MM-DD.dump"
+pg_restore --list "opshub-backup-2026-07-21.dump"
 ```
 
 You should see all the tables (`users`, `manufacturers`, `products`, `reorder_alerts`, …).
@@ -47,7 +47,7 @@ points at before you run this — restoring a backup over live production is how
 day of work.
 
 ```powershell
-pg_restore --clean --if-exists --no-owner --dbname=$env:DATABASE_URL "opshub-backup-YYYY-MM-DD.dump"
+pg_restore --clean --if-exists --no-owner --dbname=$env:DATABASE_URL "opshub-backup-2026-07-21.dump"
 ```
 
 - `--clean --if-exists` drops existing objects first so the restore isn't blocked by them.

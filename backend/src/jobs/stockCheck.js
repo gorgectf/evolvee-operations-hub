@@ -20,7 +20,7 @@ async function alertIfLowStock(productId, currentStock, threshold) {
 let lastRun = null;
 const getLastStockCheck = () => lastRun;
 
-// Public entry point: records failure state before re-throwing so /health can report it.
+// runs the check and saves failure state so /health can see it
 async function runStockCheck() {
     try {
         return await runStockCheckInner();
@@ -30,6 +30,7 @@ async function runStockCheck() {
     }
 }
 
+// pulls live stock from shopify, compares to thresholds, makes alerts
 async function runStockCheckInner() {
     const stockLevels = await shopify.getStockLevels();
 

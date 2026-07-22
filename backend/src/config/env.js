@@ -13,6 +13,7 @@ function required(name, fallback) {
     return value;
 }
 
+// checks if a db connection string points at localhost
 function hostIsLocal(connectionString) {
     try {
         const host = new URL(connectionString).hostname;
@@ -50,6 +51,7 @@ function requiredJwtSecret() {
     return value;
 }
 
+// splits CORS_ORIGIN env var into a clean list of allowed origins
 function parseCorsOrigins() {
     let raw = process.env.CORS_ORIGIN;
     if (!raw) {

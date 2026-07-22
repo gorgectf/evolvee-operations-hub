@@ -1,4 +1,5 @@
-﻿export function compareValues(a, b) {
+﻿// Compares two values for sorting, handling nulls and numbers/text.
+export function compareValues(a, b) {
     // Nulls always sort to the end, regardless of sort direction.
     if (a == null && b == null) return 0;
     if (a == null) return 1;
@@ -8,6 +9,7 @@
     return String(a).localeCompare(String(b), undefined, { numeric: true });
 }
 
+// Lowercases text and strips accents for consistent searching.
 export function normalizeText(value) {
     return String(value ?? '')
         .normalize('NFKD')
@@ -15,6 +17,7 @@ export function normalizeText(value) {
         .toLowerCase();
 }
 
+// Splits a search string into terms, supporting quotes and -exclude.
 export function parseQuery(query) {
     const terms = [];
     const re = /(-)?(?:"([^"]*)"|(\S+))/g;
@@ -26,6 +29,7 @@ export function parseQuery(query) {
     return terms;
 }
 
+// Filters rows by search query and sorts them by the chosen column.
 export function selectRows(rows, searchFields, query, sort) {
     const terms = parseQuery(query);
     let view = rows || [];
@@ -47,10 +51,11 @@ export function selectRows(rows, searchFields, query, sort) {
     return view;
 }
 
+// Converts rows and column definitions into CSV text.
 export function toCsv(columns, rows) {
     const cell = (value) => {
         let s = value == null ? '' : String(value);
-        // Neutralise spreadsheet formula injection: a leading =, +, -, @ can execute in Excel.
+        // Escape values starting with =, +, -, @ so Excel won't run them.
         if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
 
         return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;

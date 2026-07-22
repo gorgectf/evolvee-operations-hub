@@ -13,6 +13,7 @@ const router = express.Router();
 router.use(authenticate, requirePermission('manufacturers'));
 router.param('id', validateId);
 
+// lists all products with manufacturer name and threshold
 router.get('/', asyncRoute(async (req, res) => {
     const sql =
         'SELECT p.*, m.name AS manufacturer_name, rt.threshold ' +
@@ -27,6 +28,7 @@ router.get('/', asyncRoute(async (req, res) => {
     res.json({ products: result.rows });
 }));
 
+// returns one product with stock, sales, reviews, history, all merged
 router.get('/:id', asyncRoute(async (req, res) => {
     const id = Number(req.params.id);
 
@@ -44,6 +46,7 @@ router.get('/:id', asyncRoute(async (req, res) => {
     if (!product) {
         return res.status(404).json({ error: 'Product not found.' });
     }
+    // wraps a promise so one failing integration doesn't break the whole page
     const safe = (p, fallback, label) => p.catch((err) => {
         console.error(`[products] ${label} unavailable —`, err.message);
         return fallback;
@@ -94,6 +97,7 @@ router.get('/:id', asyncRoute(async (req, res) => {
     });
 }));
 
+// builds the VALUES clause and params for a bulk product insert/update
 function buildProductUpsert(items) {
     const values = [];
     const rows = items.map((item, n) => {
@@ -104,6 +108,7 @@ function buildProductUpsert(items) {
     return { placeholders: rows.join(', '), values };
 }
 
+// pulls all shopify products into our products table
 router.post('/sync-shopify', asyncRoute(async (req, res) => {
     const stock = await shopify.getStockLevels();
 
@@ -127,6 +132,7 @@ router.post('/sync-shopify', asyncRoute(async (req, res) => {
     res.json({ synced: synced, skipped: skipped, total: stock.length });
 }));
 
+// creates a product and optionally its reorder threshold, in one transaction
 router.post('/', asyncRoute(async (req, res) => {
     const body = req.body || {};
     const sku = body.sku;
@@ -200,6 +206,7 @@ router.post('/', asyncRoute(async (req, res) => {
     res.status(201).json({ product: product });
 }));
 
+// updates only the product fields present in the request body
 router.patch('/:id', asyncRoute(async (req, res) => {
     const id = Number(req.params.id);
     const body = req.body || {};
@@ -247,6 +254,7 @@ router.patch('/:id', asyncRoute(async (req, res) => {
     res.json({ product: result.rows[0] });
 }));
 
+// reassigns a product to a different manufacturer
 router.patch('/:id/manufacturer', asyncRoute(async (req, res) => {
     const body = req.body || {};
 
@@ -269,6 +277,7 @@ router.patch('/:id/manufacturer', asyncRoute(async (req, res) => {
     res.json({ product: result.rows[0] });
 }));
 
+// sets or updates a product's low stock threshold
 router.put('/:id/threshold', asyncRoute(async (req, res) => {
     const body = req.body || {};
 
@@ -296,6 +305,7 @@ router.put('/:id/threshold', asyncRoute(async (req, res) => {
     res.json({ threshold: result.rows[0] });
 }));
 
+// sets a product's unit cost
 router.put('/:id/cost', asyncRoute(async (req, res) => {
     const body = req.body || {};
 
