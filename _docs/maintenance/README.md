@@ -14,6 +14,24 @@ questions live in the [../user-guide/](../user-guide/).
 
 ---
 
+## Maintenance cadence
+
+A quick map of what to check and how often. Each row links to the detail.
+
+| How often | Task | Where |
+|---|---|---|
+| Daily (2 min) | App health endpoint returns `ok: true`; no sync-failure banner in the app | [monitoring-and-health.md](monitoring-and-health.md) |
+| Daily | Scan backend logs for `[stock-check] failed` or repeated `HTTP 5xx` lines | [monitoring-and-health.md](monitoring-and-health.md) |
+| Weekly | Confirm the hourly stock check is producing/clearing alerts as expected | [monitoring-and-health.md](monitoring-and-health.md) |
+| Weekly | Confirm a database backup exists and is recent | [database-maintenance.md](database-maintenance.md) |
+| Monthly | Review integration tokens for upcoming expiry (Shopify token, Zoho refresh token) | [integrations.md](integrations.md) |
+| Monthly | `npm audit` on `backend` and `frontend`; apply low-risk patches | [updating-dependencies.md](updating-dependencies.md) |
+| As needed | Add/remove a user, reset a password, change a role | [access-management.md](access-management.md) |
+| As needed | Restore from backup / roll back a deploy | [backup-and-recovery.md](backup-and-recovery.md) |
+| When something breaks | Operational failure runbook (symptom → cause → fix) | [common-issues.md](common-issues.md) |
+
+---
+
 ## Files in this folder
 
 - **[architecture.md](architecture.md)** — how the pieces fit together, where each concern

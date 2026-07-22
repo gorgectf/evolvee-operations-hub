@@ -88,7 +88,8 @@ Two guardrails you'll hit by design, not by bug:
 The first admin is created at deploy time by `admin` seed mode (`AUTO_SEED=admin` or
 `npm run db:seed:admin`). If `ADMIN_PASSWORD` is left blank, a strong random password is
 generated and printed **once** to the deploy logs — grab it then. After the first admin
-exists, create the rest from the Users page. 
+exists, create the rest from the Users page. Details:
+[deployment/going-live.md](../deployment/going-live.md) and `backend/.env.example`.
 
 ---
 

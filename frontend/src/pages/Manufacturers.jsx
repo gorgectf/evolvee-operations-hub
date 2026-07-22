@@ -16,7 +16,7 @@ function lastContactCell(iso) {
         : label;
 }
 
-// Manufacturers list page: Shows suppliers and lets user add new ones.
+// Manufacturers list page: shows suppliers and lets user add new ones.
 export default function Manufacturers() {
     const [list, setList] = useState(null);
     const [error, setError] = useState('');

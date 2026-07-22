@@ -4,6 +4,7 @@ const { authenticate, requirePermission } = require('../middleware/auth');
 const { asyncRoute } = require('../middleware/errorHandler');
 const shopify = require('../services/integrations/shopify');
 const zohoCrm = require('../services/integrations/zohoCrm');
+const partnerDashboard = require('../services/integrations/partnerDashboard');
 const { computeProductMetrics } = require('../services/productMetrics');
 const { sortBySeverity } = require('../services/alertSeverity');
 
@@ -235,9 +236,10 @@ router.get('/alerts-summary', requirePermission('alerts'), asyncRoute(async (req
     });
 }));
 
-// QR partner dashboard placeholder message
-router.get('/partners', requirePermission('partners'), (req, res) => {
-    res.json({ message: 'QR partner dashboard is in development — coming soon.' });
-});
+// QR partner summary — read-only pull from the Evolvée Partners app.
+router.get('/partners', requirePermission('partners'), asyncRoute(async (req, res) => {
+    const summary = await partnerDashboard.getPartnerSummary();
+    res.json(summary);
+}));
 
 module.exports = router;
