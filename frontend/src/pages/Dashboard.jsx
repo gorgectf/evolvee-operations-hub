@@ -356,7 +356,7 @@ export default function Dashboard() {
     const revenue = useModule('/dashboard/revenue', canAccess('revenue'));
     const shipping = useModule('/dashboard/shipping', canAccess('shipping'), 30000);
     const alerts = useModule('/dashboard/alerts-summary', canAccess('alerts'));
-    const partners = useModule('/dashboard/partners', canAccess('partners'));
+    const partners = useModule('/dashboard/partners', canAccess('partners'), 60000);
     const sync = useModule('/sync/status', canAccess('sync'));
 
     // Sources that failed their most recent sync
@@ -604,9 +604,43 @@ export default function Dashboard() {
     }
     if (canAccess('partners')) {
         defs.push({ id: 'partners', el: (
-                    <Tile title="Partners & commissions" source="QR partner dashboard">
+                    <Tile title="Partners & commissions" source="QR partner dashboard" wide>
                         <Body state={partners}>
-                            {(data) => <p className="empty">{data.message}</p>}
+                            {(data) => (
+                                <>
+                                    <div className="kpi-strip">
+                                        <div className="kpi kpi-card">
+                                            <div className="v">{data.kpis.approved_partners}</div>
+                                            <div className="l">Approved partners</div>
+                                        </div>
+                                        <div className="kpi kpi-card">
+                                            <div className="v">{data.kpis.recent_clicks}</div>
+                                            <div className="l">Clicks (30d)</div>
+                                        </div>
+                                        <div className="kpi kpi-card">
+                                            <div className="v">{data.kpis.conversion_rate}%</div>
+                                            <div className="l">Conversion rate</div>
+                                        </div>
+                                        <div className="kpi kpi-card">
+                                            <div className="v">{formatGBP(data.kpis.total_commission)}</div>
+                                            <div className="l">Commission (approved)</div>
+                                        </div>
+                                    </div>
+                                    <DataTable
+                                        rows={data.top_partners}
+                                        filename="top-partners.csv"
+                                        keyField="partner_code"
+                                        columns={[
+                                            { label: 'Partner', key: 'partner_name' },
+                                            { label: 'Code', key: 'partner_code' },
+                                            { label: 'Location', key: 'location' },
+                                            { label: 'Clicks', key: 'clicks', num: true },
+                                            { label: 'Conversions', key: 'conversions', num: true },
+                                            { label: 'Commission', key: 'commission', num: true, render: (p) => formatGBP(p.commission) },
+                                        ]}
+                                    />
+                                </>
+                            )}
                         </Body>
                     </Tile>
         ) });

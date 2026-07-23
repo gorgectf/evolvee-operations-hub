@@ -90,7 +90,8 @@ const env = {
 
     modes: {
         shopify: envOr('SHOPIFY_MODE', 'off'),
-        zohoCrm: envOr('ZOHO_CRM_MODE', 'off')
+        zohoCrm: envOr('ZOHO_CRM_MODE', 'off'),
+        partnerDashboard: envOr('PARTNER_DASHBOARD_MODE', 'off')
     },
 
     shopify: {
@@ -105,6 +106,11 @@ const env = {
         refreshToken: envOr('ZOHO_REFRESH_TOKEN', ''),
         accountsBase: envOr('ZOHO_ACCOUNTS_BASE', 'https://accounts.zoho.com'),
         apiBase: envOr('ZOHO_API_BASE', 'https://www.zohoapis.com')
+    },
+
+    partnerDashboard: {
+        baseUrl: envOr('PARTNER_DASHBOARD_BASE_URL', ''),
+        apiKey: envOr('PARTNER_DASHBOARD_API_KEY', '')
     }
 };
 
